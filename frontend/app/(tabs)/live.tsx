@@ -56,12 +56,8 @@ export default function LiveScreen() {
   const [playerEpg, setPlayerEpg] = useState<{ current: any; next: any } | null>(null);
   const [playerProgress, setPlayerProgress] = useState(0);
 
-  // Fullscreen state (same player, no navigation)
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showFsControls, setShowFsControls] = useState(true);
-  const [fsAspectMode, setFsAspectMode] = useState<ContentFit>('contain');
-  const fsControlsOpacity = useRef(new Animated.Value(1)).current;
-  const fsControlsTimer = useRef<NodeJS.Timeout | null>(null);
+  // Fullscreen state - uses native VideoView.enterFullscreen()
+  const videoViewRef = useRef<any>(null);
   const isFullscreenRef = useRef(false);
 
   // Full TV guide state
