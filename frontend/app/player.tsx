@@ -290,22 +290,6 @@ export default function PlayerScreen() {
         </Animated.View>
       )}
 
-      {/* TV GUIDE OVERLAY */}
-      {showGuide && (
-        <Animated.View style={[styles.guideOverlay, { opacity: guideOpacity }]} pointerEvents="none">
-          <View style={styles.guideContent}>
-            {currentChannel.streamIcon ? (
-              <Image source={{ uri: currentChannel.streamIcon }} style={styles.guideIcon} resizeMode="contain" />
-            ) : null}
-            <View style={styles.guideTextWrap}>
-              <Text style={styles.guideChannelName} numberOfLines={1}>{currentChannel.streamName}</Text>
-              {epgCurrent?.title ? <Text style={styles.guideProgramName} numberOfLines={1}>{epgCurrent.title}</Text> : null}
-              {epgCurrent && <View style={styles.guideProgressBar}><View style={[styles.guideProgressFill, { width: `${epgProgress * 100}%` }]} /></View>}
-            </View>
-          </View>
-        </Animated.View>
-      )}
-
       {/* OVERLAY HIDDEN: tap to show */}
       {!showOverlay && (
         <TouchableOpacity testID="player-tap-show" activeOpacity={1} style={StyleSheet.absoluteFill} onPress={toggleOverlay} />
