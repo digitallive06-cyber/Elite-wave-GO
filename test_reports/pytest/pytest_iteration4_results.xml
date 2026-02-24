@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="1" failures="0" skipped="0" tests="1" time="0.173" timestamp="2026-02-24T04:34:45.130478+00:00" hostname="agent-env-a0ec735a-b68c-4595-8599-531c4fadda4d"><testcase classname="" name="tests.test_iteration4_tubi_player" time="0.000"><error message="collection failure">tests/test_iteration4_tubi_player.py:10: in &lt;module&gt;
+    BASE_URL = os.environ['EXPO_PUBLIC_BACKEND_URL'].rstrip('/')
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+&lt;frozen os&gt;:679: in __getitem__
+    ???
+E   KeyError: 'EXPO_PUBLIC_BACKEND_URL'</error></testcase></testsuite></testsuites>
