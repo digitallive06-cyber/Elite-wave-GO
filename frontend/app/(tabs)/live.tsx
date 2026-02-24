@@ -273,10 +273,22 @@ export default function LiveScreen() {
   useFocusEffect(
     useCallback(() => {
       navigatingRef.current = false; // Reset guard when returning from player
+      // Re-lock portrait if no active channel, unlock if channel is playing
+      if (Platform.OS !== 'web') {
+        if (activeChannel) {
+          ScreenOrientation.unlockAsync().catch(() => {});
+        } else {
+          ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+        }
+      }
       return () => {
         try { inlinePlayer.pause(); } catch (e) {}
+        // Lock portrait when leaving live tab
+        if (Platform.OS !== 'web') {
+          ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+        }
       };
-    }, [inlinePlayer])
+    }, [inlinePlayer, activeChannel])
   );
 
   // Filtered programs for TV guide
