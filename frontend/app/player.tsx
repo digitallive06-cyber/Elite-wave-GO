@@ -58,6 +58,18 @@ export default function PlayerScreen() {
     containerExtension: params.containerExtension || 'ts',
   });
 
+  // Lock to landscape on mount, unlock on unmount
+  useEffect(() => {
+    if (Platform.OS !== 'web') {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
+    }
+    return () => {
+      if (Platform.OS !== 'web') {
+        ScreenOrientation.unlockAsync().catch(() => {});
+      }
+    };
+  }, []);
+
   // Load channel list for category (for prev/next switching)
   useEffect(() => {
     if (currentChannel.streamType === 'live' && currentChannel.categoryId) {
