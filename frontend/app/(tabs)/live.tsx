@@ -691,7 +691,7 @@ export default function LiveScreen() {
               <View style={styles.inlineLoading}>
                 <ActivityIndicator size="small" color="#00BFFF" />
               </View>
-            ) : streamUrl ? (
+            ) : (streamUrl && !isFullscreen) ? (
               <TouchableOpacity activeOpacity={0.95} onPress={goFullscreen} style={styles.inlineVideoTouch}>
                 <VideoView
                   testID="inline-video-player"
