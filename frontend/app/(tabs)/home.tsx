@@ -6,13 +6,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { api } from '../../src/utils/api';
 
 const { width } = Dimensions.get('window');
 const MOVIE_CARD_WIDTH = (width - 48 - 24) / 2.5;
-const CHANNEL_CARD_WIDTH = (width - 48 - 12) / 2;
 
 export default function HomeScreen() {
   const { colors } = useTheme();
@@ -23,6 +23,7 @@ export default function HomeScreen() {
   const [recentSeries, setRecentSeries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [heroStreamUrl, setHeroStreamUrl] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -31,15 +32,25 @@ export default function HomeScreen() {
         api.getRecentVod(username, password, 20),
         api.getRecentSeries(username, password, 20),
       ]);
-      if (histData.status === 'fulfilled') setHistory(histData.value || []);
+      if (histData.status === 'fulfilled') {
+        const h = histData.value || [];
+        setHistory(h);
+        // Load hero stream URL for last watched
+        if (h.length > 0) {
+          const lastItem = h[0];
+          try {
+            const urlData = await api.getStreamUrl(
+              username, password, lastItem.stream_id,
+              lastItem.stream_type || 'live', 'ts'
+            );
+            setHeroStreamUrl(urlData.url);
+          } catch (e) { console.error('Hero URL error:', e); }
+        }
+      }
       if (moviesData.status === 'fulfilled') setRecentMovies(moviesData.value || []);
       if (seriesData.status === 'fulfilled') setRecentSeries(seriesData.value || []);
-    } catch (e) {
-      console.error('Load data error:', e);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+    } catch (e) { console.error('Load data error:', e); }
+    finally { setLoading(false); setRefreshing(false); }
   }, [username, password]);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -47,6 +58,15 @@ export default function HomeScreen() {
   const onRefresh = () => { setRefreshing(true); loadData(); };
 
   const lastWatched = history.length > 0 ? history[0] : null;
+
+  // Hero video player
+  const heroPlayer = useVideoPlayer(heroStreamUrl || '', (p) => {
+    if (heroStreamUrl) {
+      p.loop = true;
+      p.volume = 0;
+      p.play();
+    }
+  });
 
   const playStream = (item: any, type: string = 'live') => {
     router.push({
@@ -57,6 +77,7 @@ export default function HomeScreen() {
         streamIcon: item.stream_icon || item.cover || '',
         streamType: type,
         categoryName: item.category_name || '',
+        categoryId: item.category_id || '',
         containerExtension: item.container_extension || 'ts',
       },
     });
@@ -87,42 +108,59 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Hero Player Area */}
-        <View style={[styles.heroContainer, { backgroundColor: '#000' }]}>
-          {lastWatched ? (
-            <View style={styles.heroContent}>
-              {lastWatched.stream_icon ? (
-                <Image source={{ uri: lastWatched.stream_icon }} style={styles.heroLogo} resizeMode="contain" />
+        {/* Hero Player - plays live video */}
+        <TouchableOpacity
+          testID="hero-player-area"
+          style={[styles.heroContainer]}
+          activeOpacity={0.9}
+          onPress={() => lastWatched && playStream(lastWatched, lastWatched.stream_type || 'live')}
+        >
+          {heroStreamUrl ? (
+            <VideoView
+              testID="hero-video"
+              style={styles.heroVideo}
+              player={heroPlayer}
+              contentFit="cover"
+              nativeControls={false}
+            />
+          ) : (
+            <View style={styles.heroPlaceholder}>
+              {lastWatched?.stream_icon ? (
+                <Image source={{ uri: lastWatched.stream_icon }} style={styles.heroLogoImg} resizeMode="contain" />
               ) : (
-                <Ionicons name="tv-outline" size={56} color="#333" />
+                <Ionicons name="tv-outline" size={48} color="#333" />
               )}
-              <View style={styles.heroOverlay}>
+            </View>
+          )}
+          {/* Gradient overlay on top of video */}
+          <View style={styles.heroGradient}>
+            {lastWatched ? (
+              <>
                 <View style={styles.heroLiveTag}>
                   <View style={styles.liveDot} />
-                  <Text style={styles.liveText}>LAST WATCHED</Text>
+                  <Text style={styles.liveText}>LIVE</Text>
                 </View>
                 <Text style={styles.heroChannelName} numberOfLines={1}>{lastWatched.stream_name}</Text>
                 {lastWatched.category_name ? (
                   <Text style={styles.heroCategoryName}>{lastWatched.category_name}</Text>
                 ) : null}
-              </View>
-              <TouchableOpacity testID="hero-play-btn" style={styles.heroPlayBtn} onPress={() => playStream(lastWatched, lastWatched.stream_type || 'live')}>
-                <Ionicons name="play" size={32} color="#fff" />
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.heroEmpty}>
-              <Ionicons name="tv-outline" size={48} color="#333" />
+              </>
+            ) : (
               <Text style={styles.heroEmptyText}>Start watching to see your last channel here</Text>
-            </View>
+            )}
+          </View>
+          {lastWatched && (
+            <TouchableOpacity testID="hero-play-btn" style={styles.heroPlayBtn} onPress={() => playStream(lastWatched, lastWatched.stream_type || 'live')}>
+              <Ionicons name="play" size={28} color="#fff" />
+            </TouchableOpacity>
           )}
-        </View>
+        </TouchableOpacity>
 
-        {/* Recently Watched Live Channels */}
+        {/* Recently Watched */}
         {history.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Recently Watched Live Channels</Text>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Recently Watched</Text>
             </View>
             <FlatList
               horizontal
@@ -135,16 +173,17 @@ export default function HomeScreen() {
                   testID={`history-item-${index}`}
                   style={[styles.channelCard, { backgroundColor: colors.surface }]}
                   activeOpacity={0.7}
+                  onPress={() => playStream(item, item.stream_type || 'live')}
                 >
                   <View style={styles.channelCardInner}>
                     {item.stream_icon ? (
                       <Image source={{ uri: item.stream_icon }} style={styles.channelCardImg} resizeMode="contain" />
                     ) : (
-                      <Ionicons name="tv-outline" size={32} color={colors.textSecondary} />
+                      <Ionicons name="tv-outline" size={24} color={colors.textSecondary} />
                     )}
                   </View>
-                  <Text style={[styles.channelCardNum, { color: colors.textSecondary }]} numberOfLines={1}>
-                    {item.stream_id}
+                  <Text style={[styles.channelCardName, { color: colors.textPrimary }]} numberOfLines={1}>
+                    {item.stream_name}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -171,8 +210,9 @@ export default function HomeScreen() {
               renderItem={({ item, index }) => (
                 <TouchableOpacity
                   testID={`recent-movie-${index}`}
-                  style={[styles.posterCard]}
+                  style={styles.posterCard}
                   activeOpacity={0.8}
+                  onPress={() => playStream(item, 'movie')}
                 >
                   {item.stream_icon ? (
                     <Image source={{ uri: item.stream_icon }} style={styles.posterImg} resizeMode="cover" />
@@ -212,7 +252,7 @@ export default function HomeScreen() {
               renderItem={({ item, index }) => (
                 <TouchableOpacity
                   testID={`recent-series-${index}`}
-                  style={[styles.posterCard]}
+                  style={styles.posterCard}
                   activeOpacity={0.8}
                 >
                   {item.cover ? (
@@ -245,86 +285,67 @@ const styles = StyleSheet.create({
   loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   loadingText: { fontSize: 14 },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: 20, paddingVertical: 12,
   },
   headerTitle: { fontSize: 24, fontWeight: '800' },
 
   // Hero
   heroContainer: {
-    marginHorizontal: 16,
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 24,
-    height: 200,
+    marginHorizontal: 16, borderRadius: 16, overflow: 'hidden',
+    marginBottom: 24, height: 200, backgroundColor: '#000',
   },
-  heroContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  heroLogo: { width: 80, height: 80, opacity: 0.3, position: 'absolute' },
-  heroOverlay: { position: 'absolute', bottom: 16, left: 16, right: 80 },
+  heroVideo: { width: '100%', height: '100%' },
+  heroPlaceholder: {
+    width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center', backgroundColor: '#111',
+  },
+  heroLogoImg: { width: 80, height: 80, opacity: 0.4 },
+  heroGradient: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    paddingHorizontal: 16, paddingBottom: 16, paddingTop: 40,
+    backgroundColor: 'rgba(0,0,0,0.0)',
+    // Simulated gradient via layered background
+  },
   heroLiveTag: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: 'rgba(0,191,255,0.2)',
-    paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: 20, alignSelf: 'flex-start', marginBottom: 8,
+    backgroundColor: 'rgba(229,9,20,0.9)',
+    paddingHorizontal: 10, paddingVertical: 3,
+    borderRadius: 4, alignSelf: 'flex-start', marginBottom: 6, gap: 4,
   },
-  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#00BFFF', marginRight: 6 },
-  liveText: { color: '#00BFFF', fontSize: 10, fontWeight: '700', letterSpacing: 1 },
-  heroChannelName: { color: '#fff', fontSize: 18, fontWeight: '700' },
-  heroCategoryName: { color: 'rgba(255,255,255,0.6)', fontSize: 13, marginTop: 2 },
+  liveDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#fff' },
+  liveText: { color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+  heroChannelName: { color: '#fff', fontSize: 18, fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
+  heroCategoryName: { color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 2, textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
+  heroEmptyText: { color: '#555', fontSize: 13, textAlign: 'center' },
   heroPlayBtn: {
-    position: 'absolute', right: 20, bottom: 20,
-    width: 52, height: 52, borderRadius: 26,
-    backgroundColor: 'rgba(0,191,255,0.3)',
+    position: 'absolute', right: 16, bottom: 16,
+    width: 48, height: 48, borderRadius: 24,
+    backgroundColor: 'rgba(0,191,255,0.8)',
     justifyContent: 'center', alignItems: 'center',
   },
-  heroEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  heroEmptyText: { color: '#555', fontSize: 13, textAlign: 'center', paddingHorizontal: 40 },
 
   // Sections
   section: { marginBottom: 28 },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 14,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: 20, marginBottom: 14,
   },
   sectionTitle: { fontSize: 18, fontWeight: '700', flex: 1 },
   seeAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   seeAllText: { fontSize: 14, fontWeight: '600' },
   horizontalList: { paddingHorizontal: 16, gap: 12 },
 
-  // Recently watched channel cards
-  channelCard: {
-    width: CHANNEL_CARD_WIDTH,
-    borderRadius: 12,
-    overflow: 'hidden',
-    padding: 12,
-    alignItems: 'center',
-  },
-  channelCardInner: {
-    width: '100%',
-    height: 80,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  channelCardImg: { width: 80, height: 60 },
-  channelCardNum: { fontSize: 13, fontWeight: '600', marginTop: 8 },
+  // Channel cards
+  channelCard: { width: 100, borderRadius: 12, overflow: 'hidden', padding: 10, alignItems: 'center' },
+  channelCardInner: { width: '100%', height: 60, justifyContent: 'center', alignItems: 'center' },
+  channelCardImg: { width: 60, height: 44 },
+  channelCardName: { fontSize: 11, fontWeight: '600', textAlign: 'center', marginTop: 6 },
 
-  // Movie/Series poster cards
-  posterCard: {
-    width: MOVIE_CARD_WIDTH,
-    aspectRatio: 2 / 3,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
+  // Poster cards
+  posterCard: { width: MOVIE_CARD_WIDTH, aspectRatio: 2 / 3, borderRadius: 12, overflow: 'hidden' },
   posterImg: { width: '100%', height: '100%' },
   posterPlaceholder: {
-    width: '100%', height: '100%',
-    justifyContent: 'center', alignItems: 'center',
+    width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center',
     borderRadius: 12, padding: 8,
   },
   posterPlaceholderText: { fontSize: 11, textAlign: 'center', marginTop: 4 },
