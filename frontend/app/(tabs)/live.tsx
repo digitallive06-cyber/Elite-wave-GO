@@ -408,8 +408,6 @@ export default function LiveScreen() {
   );
 }
 
-const PLAYER_HEIGHT = Math.min(SCREEN_W * 9 / 16, 240);
-
 const styles = StyleSheet.create({
   container: { flex: 1 },
   loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
