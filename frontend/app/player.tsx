@@ -223,10 +223,9 @@ export default function PlayerScreen() {
   };
 
   useEffect(() => {
-    if (!loading && !error) { showOverlayNow(); showTvGuide(); }
+    if (!loading && !error) { showOverlayNow(); }
     return () => {
       if (overlayTimer.current) clearTimeout(overlayTimer.current);
-      if (guideTimer.current) clearTimeout(guideTimer.current);
     };
   }, [loading, error]);
 
