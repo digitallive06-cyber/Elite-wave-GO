@@ -678,6 +678,18 @@ const styles = StyleSheet.create({
   loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   pageTitle: { fontSize: 24, fontWeight: '800', paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
 
+  // Favorites section
+  favSection: { marginBottom: 8 },
+  favSectionTitle: { fontSize: 16, fontWeight: '700', paddingHorizontal: 20, marginBottom: 10 },
+  favList: { paddingHorizontal: 16, gap: 10 },
+  favCard: {
+    width: 88, borderRadius: 12, borderWidth: 1, padding: 8,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  favCardImg: { width: 48, height: 36, marginBottom: 4 },
+  favCardName: { fontSize: 10, fontWeight: '600', textAlign: 'center' },
+  favStar: { position: 'absolute', top: 4, right: 4 },
+
   // Inline player
   inlinePlayerSection: { backgroundColor: '#000' },
   inlinePlayerWrap: { width: '100%', height: PLAYER_HEIGHT, position: 'relative' },
