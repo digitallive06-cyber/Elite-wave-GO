@@ -221,7 +221,10 @@ export default function LiveScreen() {
   // Navigate to multiview
   const openMultiview = useCallback(() => {
     try { inlinePlayer.pause(); } catch {}
-    exitFullscreen();
+    // Exit native fullscreen first if active
+    if (isFullscreenRef.current && videoViewRef.current) {
+      videoViewRef.current.exitFullscreen();
+    }
     setTimeout(() => {
       router.push({
         pathname: '/multiview',
