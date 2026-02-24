@@ -158,6 +158,47 @@ export default function HomeScreen() {
           )}
         </TouchableOpacity>
 
+        {/* Favorites */}
+        {favorites.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="star" size={18} color="#FFD700" />
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary, marginLeft: 6 }]}>Favorites</Text>
+            </View>
+            <FlatList
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              data={favorites}
+              keyExtractor={(item) => `fav-${item.stream_id}`}
+              contentContainerStyle={styles.horizontalList}
+              renderItem={({ item, index }) => (
+                <TouchableOpacity
+                  testID={`home-fav-${index}`}
+                  style={[styles.channelCard, { backgroundColor: colors.surface }]}
+                  activeOpacity={0.7}
+                  onPress={() => playStream({
+                    stream_id: item.stream_id,
+                    stream_name: item.name,
+                    stream_icon: item.stream_icon,
+                    category_id: item.category_id,
+                  }, 'live')}
+                >
+                  <View style={styles.channelCardInner}>
+                    {item.stream_icon ? (
+                      <Image source={{ uri: item.stream_icon }} style={styles.channelCardImg} resizeMode="contain" />
+                    ) : (
+                      <Ionicons name="tv-outline" size={24} color={colors.textSecondary} />
+                    )}
+                  </View>
+                  <Text style={[styles.channelCardName, { color: colors.textPrimary }]} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        )}
+
         {/* Recently Watched */}
         {history.length > 0 && (
           <View style={styles.section}>
