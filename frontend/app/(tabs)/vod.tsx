@@ -62,11 +62,26 @@ export default function VodScreen() {
     loadStreams(catId || undefined);
   };
 
+  const playMovie = (item: any) => {
+    router.push({
+      pathname: '/player',
+      params: {
+        streamId: String(item.stream_id),
+        streamName: item.name,
+        streamIcon: item.stream_icon || '',
+        streamType: 'movie',
+        categoryName: '',
+        containerExtension: item.container_extension || 'mp4',
+      },
+    });
+  };
+
   const renderMovie = ({ item, index }: { item: any; index: number }) => (
     <TouchableOpacity
       testID={`vod-item-${index}`}
       style={[styles.movieCard, { backgroundColor: colors.surface }]}
       activeOpacity={0.8}
+      onPress={() => playMovie(item)}
     >
       <View style={styles.posterWrap}>
         {item.stream_icon ? (
