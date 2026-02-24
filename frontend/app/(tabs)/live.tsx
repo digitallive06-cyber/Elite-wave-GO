@@ -17,8 +17,8 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { useFavorites } from '../../src/contexts/FavoritesContext';
 import { api } from '../../src/utils/api';
 
-const { width: SCREEN_W } = Dimensions.get('window');
-const PLAYER_HEIGHT = Platform.OS === 'web' ? 240 : Math.min(SCREEN_W * 9 / 16, 240);
+const ASPECT_MODES = ['contain', 'cover', 'fill'] as const;
+type ContentFit = typeof ASPECT_MODES[number];
 
 const getDateStr = (date: Date) => {
   const y = date.getFullYear();
