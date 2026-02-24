@@ -6,8 +6,8 @@ import pytest
 import requests
 import os
 
-# Use EXPO_PUBLIC_BACKEND_URL from env (no default fallback)
-BASE_URL = os.environ['EXPO_PUBLIC_BACKEND_URL'].rstrip('/')
+# Use public backend URL
+BASE_URL = "https://iptv-elite-stream.preview.emergentagent.com"
 
 # Xtream credentials
 USERNAME = "DJBIGANT"
