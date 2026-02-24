@@ -1,0 +1,81 @@
+{
+  "summary": "Iteration 10: Backend regression tests (9/9 passed) + static code analysis verifying all 4 user-reported bug fixes. All changes verified correctly implemented.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "note": "React Native Expo app - frontend verified via static code analysis only (tunnel deployment)"
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration10_regression.py",
+    "/app/test_reports/pytest/pytest_iteration10.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "player.tsx: VERIFIED - showGuide/guideOverlay/guideOpacity states REMOVED. Only bottom overlay remains (lines 330-389). Top TV guide overlay successfully removed.",
+    "player.tsx: VERIFIED - Grid icon (grid-outline) at line 385 triggers navigation to /multiview (lines 369-384) with stream params. Multiview navigation working.",
+    "multiview.tsx: VERIFIED - New screen with correct 2x2 grid structure (cellW/cellH = dimension/2 at lines 129-130). Uses VideoView from expo-video (line 275). Category picker modal present (lines 159-222). Audio routing via volume control (isActive ? 1 : 0 at lines 237, 246).",
+    "tabs/_layout.tsx: VERIFIED - Portrait lock useEffect at lines 14-18 calls ScreenOrientation.lockAsync(PORTRAIT_UP) on mount. Home screen will NOT rotate to landscape.",
+    "live.tsx: VERIFIED - Orientation unlock/lock logic at lines 235-291: unlockAsync when activeChannel set (line 245), lockAsync(PORTRAIT_UP) when activeChannel cleared (line 241). Landscape rotation with active channel triggers goFullscreen (lines 250-257)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration10_regression.py"
+  ],
+  "success_rate": {
+    "backend": "100% (9/9 tests passed)",
+    "frontend": "100% (4/4 code changes verified via static analysis)"
+  },
+  "seed_data_creation": "TEST_iteration10_user favorites auto-cleaned after tests",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 4 user-reported issues FIXED: 1) Top guide overlay removed from player.tsx - no showGuide/guideOverlay/guideOpacity found. 2) Grid icon in player navigates to /multiview screen which has 2x2 VideoView grid with volume-based audio routing (active slot volume=1, others=0). 3) tabs/_layout.tsx locks all tab screens to PORTRAIT_UP on mount. 4) live.tsx unlocks orientation when activeChannel is set (allowing rotation), locks PORTRAIT_UP when cleared. Backend APIs all working: /api/health, /api/live/categories, /api/live/streams, /api/stream/url, /api/epg/{stream_id}, /api/user/favorites (POST toggle, GET list).",
+  "verified_features": [
+    {
+      "feature": "Remove duplicate top TV guide overlay in fullscreen player",
+      "status": "VERIFIED FIXED",
+      "evidence": "grep for showGuide/guideOverlay/guideOpacity in player.tsx returns 'NOT FOUND'"
+    },
+    {
+      "feature": "Grid icon in player opens multiview",
+      "status": "VERIFIED FIXED",
+      "evidence": "player.tsx line 369-385: player-multiview-btn with grid-outline icon, router.push to /multiview"
+    },
+    {
+      "feature": "Multiview 2x2 grid with category picker and audio routing",
+      "status": "VERIFIED IMPLEMENTED",
+      "evidence": "multiview.tsx: VideoView (line 275), 2x2 grid (lines 129-130), Modal picker (lines 159-222), volume isActive?1:0 (lines 237,246)"
+    },
+    {
+      "feature": "Home screen locked to portrait",
+      "status": "VERIFIED FIXED",
+      "evidence": "tabs/_layout.tsx line 16: ScreenOrientation.lockAsync(PORTRAIT_UP) in useEffect"
+    },
+    {
+      "feature": "Live screen landscape rotation triggers fullscreen player",
+      "status": "VERIFIED FIXED",
+      "evidence": "live.tsx lines 245-257: unlockAsync when activeChannel, addOrientationChangeListener triggers goFullscreen on LANDSCAPE"
+    }
+  ],
+  "verified_endpoints": [
+    {"endpoint": "GET /api/health", "status": "PASSED", "notes": "Returns {status: 'ok', xtream_dns: '...'}"}, 
+    {"endpoint": "GET /api/live/categories", "status": "PASSED", "notes": "Returns categories array with category_id, category_name"},
+    {"endpoint": "GET /api/live/streams", "status": "PASSED", "notes": "Returns streams array with stream_id, name"},
+    {"endpoint": "GET /api/stream/url", "status": "PASSED", "notes": "Returns resolved URL with fallback"},
+    {"endpoint": "GET /api/epg/{stream_id}", "status": "PASSED", "notes": "Returns epg_listings with decoded titles"},
+    {"endpoint": "POST /api/user/favorites", "status": "PASSED", "notes": "Toggle add/remove, returns {status: 'added'/'removed'}"},
+    {"endpoint": "GET /api/user/favorites", "status": "PASSED", "notes": "Returns list without MongoDB _id"}
+  ],
+  "test_execution_details": {
+    "test_file": "/app/backend/tests/test_iteration10_regression.py",
+    "framework": "pytest",
+    "total_tests": 9,
+    "passed": 9,
+    "failed": 0,
+    "skipped": 0,
+    "duration": "3.48s"
+  }
+}
