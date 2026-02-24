@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
-  Image, Platform, Dimensions
+  Image, Dimensions, Animated
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -12,7 +12,7 @@ import { useTheme } from '../src/contexts/ThemeContext';
 import { useAuth } from '../src/contexts/AuthContext';
 import { api } from '../src/utils/api';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SW, height: SH } = Dimensions.get('window');
 
 export default function PlayerScreen() {
   const { colors } = useTheme();
@@ -24,241 +24,385 @@ export default function PlayerScreen() {
     streamIcon: string;
     streamType: string;
     categoryName: string;
+    categoryId: string;
     containerExtension: string;
   }>();
 
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
-  const [fallbackUrl, setFallbackUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [retryCount, setRetryCount] = useState(0);
-  const [epgInfo, setEpgInfo] = useState<any>(null);
+  const [epgCurrent, setEpgCurrent] = useState<any>(null);
+  const [epgNext, setEpgNext] = useState<any>(null);
+  const [epgProgress, setEpgProgress] = useState(0);
+  const [channelList, setChannelList] = useState<any[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [showOverlay, setShowOverlay] = useState(true);
+  const [showGuide, setShowGuide] = useState(false);
+  const [switchingLogo, setSwitchingLogo] = useState<string | null>(null);
 
-  const streamId = parseInt(params.streamId || '0');
-  const streamName = params.streamName || 'Unknown';
-  const streamIcon = params.streamIcon || '';
-  const streamType = params.streamType || 'live';
-  const categoryName = params.categoryName || '';
-  const containerExtension = params.containerExtension || 'ts';
+  const overlayOpacity = useRef(new Animated.Value(1)).current;
+  const guideOpacity = useRef(new Animated.Value(0)).current;
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const overlayTimer = useRef<NodeJS.Timeout | null>(null);
+  const guideTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Resolve stream URL (handles LB redirects)
-  const resolveUrl = useCallback(async () => {
+  // Current channel info
+  const [currentChannel, setCurrentChannel] = useState({
+    streamId: parseInt(params.streamId || '0'),
+    streamName: params.streamName || 'Unknown',
+    streamIcon: params.streamIcon || '',
+    streamType: params.streamType || 'live',
+    categoryName: params.categoryName || '',
+    categoryId: params.categoryId || '',
+    containerExtension: params.containerExtension || 'ts',
+  });
+
+  // Load channel list for category (for prev/next switching)
+  useEffect(() => {
+    if (currentChannel.streamType === 'live' && currentChannel.categoryId) {
+      api.getLiveStreams(username, password, currentChannel.categoryId).then(data => {
+        const arr = Array.isArray(data) ? data : [];
+        setChannelList(arr);
+        const idx = arr.findIndex((s: any) => s.stream_id === currentChannel.streamId);
+        if (idx >= 0) setCurrentIndex(idx);
+      }).catch(() => {});
+    } else if (currentChannel.streamType === 'live') {
+      api.getLiveStreams(username, password).then(data => {
+        const arr = Array.isArray(data) ? data : [];
+        setChannelList(arr);
+        const idx = arr.findIndex((s: any) => s.stream_id === currentChannel.streamId);
+        if (idx >= 0) setCurrentIndex(idx);
+      }).catch(() => {});
+    }
+  }, [currentChannel.categoryId, currentChannel.streamType]);
+
+  // Resolve stream URL
+  const resolveUrl = useCallback(async (streamId: number, sType: string, ext: string) => {
     setLoading(true);
     setError('');
     try {
-      const data = await api.getStreamUrl(
-        username, password, streamId, streamType, containerExtension
-      );
+      const data = await api.getStreamUrl(username, password, streamId, sType, ext);
       setStreamUrl(data.url);
-      setFallbackUrl(data.fallback_url);
-
       // Save to history
       api.addHistory({
         username,
-        stream_id: streamId,
-        stream_name: streamName,
-        stream_icon: streamIcon,
-        stream_type: streamType,
-        category_name: categoryName,
+        stream_id: currentChannel.streamId,
+        stream_name: currentChannel.streamName,
+        stream_icon: currentChannel.streamIcon,
+        stream_type: currentChannel.streamType,
+        category_name: currentChannel.categoryName,
       }).catch(() => {});
-
-      // Load EPG for live streams
-      if (streamType === 'live') {
-        api.getEpg(username, password, streamId).then(epg => {
-          if (epg?.epg_listings?.length > 0) {
-            const now = Math.floor(Date.now() / 1000);
-            const current = epg.epg_listings.find((e: any) => {
-              const start = new Date(e.start).getTime() / 1000;
-              const end_ts = typeof e.end === 'string' && e.end.includes('-')
-                ? new Date(e.end).getTime() / 1000
-                : parseInt(e.end);
-              return now >= start && now <= end_ts;
-            });
-            setEpgInfo(current || epg.epg_listings[0]);
-          }
-        }).catch(() => {});
-      }
     } catch (e: any) {
       setError(e.message || 'Failed to load stream');
     } finally {
       setLoading(false);
     }
-  }, [username, password, streamId, streamType, containerExtension, retryCount]);
+  }, [username, password]);
 
-  useEffect(() => { resolveUrl(); }, [resolveUrl]);
+  useEffect(() => {
+    resolveUrl(currentChannel.streamId, currentChannel.streamType, currentChannel.containerExtension);
+  }, [currentChannel.streamId]);
 
-  // Create video player
+  // Load EPG
+  const loadEpg = useCallback(async (streamId: number) => {
+    if (currentChannel.streamType !== 'live') return;
+    try {
+      const data = await api.getEpg(username, password, streamId);
+      if (data?.epg_listings?.length > 0) {
+        const now = Math.floor(Date.now() / 1000);
+        const current = data.epg_listings.find((e: any) => {
+          const start = new Date(e.start).getTime() / 1000;
+          const end = new Date(e.end).getTime() / 1000;
+          return now >= start && now <= end;
+        });
+        const next = data.epg_listings.find((e: any) => {
+          const start = new Date(e.start).getTime() / 1000;
+          return start > now;
+        });
+        setEpgCurrent(current || null);
+        setEpgNext(next || null);
+        // Calculate progress
+        if (current) {
+          const start = new Date(current.start).getTime() / 1000;
+          const end = new Date(current.end).getTime() / 1000;
+          const prog = (now - start) / (end - start);
+          setEpgProgress(Math.min(Math.max(prog, 0), 1));
+        }
+      }
+    } catch (e) { /* skip */ }
+  }, [username, password, currentChannel.streamType]);
+
+  useEffect(() => { loadEpg(currentChannel.streamId); }, [currentChannel.streamId, loadEpg]);
+
+  // EPG progress updater
+  useEffect(() => {
+    if (!epgCurrent) return;
+    const interval = setInterval(() => {
+      const now = Math.floor(Date.now() / 1000);
+      const start = new Date(epgCurrent.start).getTime() / 1000;
+      const end = new Date(epgCurrent.end).getTime() / 1000;
+      setEpgProgress(Math.min(Math.max((now - start) / (end - start), 0), 1));
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [epgCurrent]);
+
+  // Video player
   const player = useVideoPlayer(streamUrl || '', (p) => {
-    if (streamUrl) {
-      p.play();
-    }
+    if (streamUrl) p.play();
   });
 
   const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
 
-  // Handle retry with fallback URL
-  const handleRetry = () => {
-    if (fallbackUrl && retryCount === 0) {
-      setStreamUrl(fallbackUrl);
-      setRetryCount(1);
+  // Auto-hide overlay after 5 seconds
+  const scheduleHideOverlay = () => {
+    if (overlayTimer.current) clearTimeout(overlayTimer.current);
+    overlayTimer.current = setTimeout(() => {
+      Animated.timing(overlayOpacity, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => setShowOverlay(false));
+    }, 5000);
+  };
+
+  const toggleOverlay = () => {
+    if (showOverlay) {
+      if (overlayTimer.current) clearTimeout(overlayTimer.current);
+      Animated.timing(overlayOpacity, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => setShowOverlay(false));
     } else {
-      setRetryCount(prev => prev + 1);
-      resolveUrl();
+      setShowOverlay(true);
+      Animated.timing(overlayOpacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+      scheduleHideOverlay();
     }
   };
 
-  const togglePlay = () => {
-    if (player.playing) {
-      player.pause();
-    } else {
-      player.play();
-    }
+  // Show TV guide overlay for 3 seconds on channel change
+  const showTvGuide = () => {
+    setShowGuide(true);
+    Animated.timing(guideOpacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+    if (guideTimer.current) clearTimeout(guideTimer.current);
+    guideTimer.current = setTimeout(() => {
+      Animated.timing(guideOpacity, { toValue: 0, duration: 500, useNativeDriver: true }).start(() => setShowGuide(false));
+    }, 3000);
   };
+
+  // Flash channel logo on switch
+  const flashLogo = (icon: string) => {
+    setSwitchingLogo(icon);
+    Animated.sequence([
+      Animated.timing(logoOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.delay(1500),
+      Animated.timing(logoOpacity, { toValue: 0, duration: 500, useNativeDriver: true }),
+    ]).start(() => setSwitchingLogo(null));
+  };
+
+  // Switch to next/prev channel
+  const switchChannel = (direction: 'next' | 'prev') => {
+    if (channelList.length === 0) return;
+    let newIdx = direction === 'next'
+      ? (currentIndex + 1) % channelList.length
+      : (currentIndex - 1 + channelList.length) % channelList.length;
+    const ch = channelList[newIdx];
+    if (!ch) return;
+    setCurrentIndex(newIdx);
+    setCurrentChannel({
+      streamId: ch.stream_id,
+      streamName: ch.name,
+      streamIcon: ch.stream_icon || '',
+      streamType: 'live',
+      categoryName: currentChannel.categoryName,
+      categoryId: currentChannel.categoryId,
+      containerExtension: 'ts',
+    });
+    flashLogo(ch.stream_icon || '');
+    showTvGuide();
+    setEpgCurrent(null);
+    setEpgNext(null);
+    setEpgProgress(0);
+  };
+
+  const formatTime = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch { return ''; }
+  };
+
+  useEffect(() => {
+    if (!loading && !error) {
+      setShowOverlay(true);
+      overlayOpacity.setValue(1);
+      scheduleHideOverlay();
+      showTvGuide();
+    }
+    return () => {
+      if (overlayTimer.current) clearTimeout(overlayTimer.current);
+      if (guideTimer.current) clearTimeout(guideTimer.current);
+    };
+  }, [loading, error]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: '#000' }]} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity testID="player-back-btn" onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={28} color="#fff" />
-        </TouchableOpacity>
-        <View style={styles.headerInfo}>
-          <Text style={styles.headerTitle} numberOfLines={1}>{streamName}</Text>
-          {categoryName ? (
-            <Text style={styles.headerSubtitle}>{categoryName}</Text>
-          ) : null}
-        </View>
-        {streamType === 'live' && (
-          <View style={styles.liveBadge}>
-            <View style={styles.liveDot} />
-            <Text style={styles.liveText}>LIVE</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Video Player */}
-      <View style={styles.playerContainer}>
-        {loading ? (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color="#00BFFF" />
-            <Text style={styles.loadingText}>Resolving stream...</Text>
-          </View>
-        ) : error ? (
-          <View style={styles.errorOverlay}>
-            <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity testID="player-retry-btn" style={styles.retryBtn} onPress={handleRetry}>
-              <Ionicons name="refresh" size={20} color="#fff" />
-              <Text style={styles.retryText}>Retry</Text>
-            </TouchableOpacity>
-          </View>
-        ) : streamUrl ? (
+    <View style={styles.container}>
+      {/* Video */}
+      {streamUrl && !loading ? (
+        <TouchableOpacity activeOpacity={1} onPress={toggleOverlay} style={StyleSheet.absoluteFill}>
           <VideoView
             testID="video-player"
-            style={styles.video}
+            style={StyleSheet.absoluteFill}
             player={player}
             allowsFullscreen
             allowsPictureInPicture
-            contentFit="contain"
-            nativeControls={true}
+            contentFit="cover"
+            nativeControls={false}
           />
-        ) : null}
-      </View>
-
-      {/* Controls Bar */}
-      <View style={styles.controlsBar}>
-        <TouchableOpacity testID="player-play-pause-btn" style={styles.controlBtn} onPress={togglePlay}>
-          <Ionicons name={isPlaying ? 'pause' : 'play'} size={28} color="#fff" />
         </TouchableOpacity>
-        <View style={styles.controlInfo}>
-          {streamIcon ? (
-            <Image source={{ uri: streamIcon }} style={styles.controlIcon} resizeMode="contain" />
+      ) : (
+        <View style={styles.blackBg}>
+          {loading ? (
+            <View style={styles.centerWrap}>
+              <ActivityIndicator size="large" color="#00BFFF" />
+              <Text style={styles.loadingText}>Loading stream...</Text>
+            </View>
+          ) : error ? (
+            <View style={styles.centerWrap}>
+              <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity testID="player-retry-btn" style={styles.retryBtn} onPress={() => resolveUrl(currentChannel.streamId, currentChannel.streamType, currentChannel.containerExtension)}>
+                <Ionicons name="refresh" size={20} color="#fff" />
+                <Text style={styles.retryText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
           ) : null}
-          <View style={styles.controlTextWrap}>
-            <Text style={styles.controlName} numberOfLines={1}>{streamName}</Text>
-            {epgInfo?.title ? (
-              <Text style={styles.controlEpg} numberOfLines={1}>{epgInfo.title}</Text>
-            ) : null}
-          </View>
-        </View>
-        <TouchableOpacity testID="player-fullscreen-btn" style={styles.controlBtn} onPress={() => {
-          // Fullscreen handled by native controls
-        }}>
-          <Ionicons name="expand-outline" size={24} color="#fff" />
-        </TouchableOpacity>
-      </View>
-
-      {/* EPG Info Panel */}
-      {epgInfo && (
-        <View style={[styles.epgPanel, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.epgTitle, { color: colors.textPrimary }]}>Now Playing</Text>
-          <Text style={[styles.epgProgramTitle, { color: colors.primary }]}>{epgInfo.title}</Text>
-          {epgInfo.description ? (
-            <Text style={[styles.epgDescription, { color: colors.textSecondary }]} numberOfLines={3}>
-              {epgInfo.description}
-            </Text>
-          ) : null}
-          {epgInfo.start && (
-            <Text style={[styles.epgTime, { color: colors.textSecondary }]}>
-              {new Date(epgInfo.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              {epgInfo.end ? ` - ${typeof epgInfo.end === 'string' && epgInfo.end.includes('-')
-                ? new Date(epgInfo.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                : new Date(parseInt(epgInfo.end) * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-              }` : ''}
-            </Text>
-          )}
         </View>
       )}
 
-      {/* Stream Info */}
-      <View style={[styles.streamInfoPanel, { backgroundColor: colors.surface }]}>
-        <Text style={[styles.streamInfoLabel, { color: colors.textSecondary }]}>Stream Type</Text>
-        <Text style={[styles.streamInfoValue, { color: colors.textPrimary }]}>
-          {streamType === 'live' ? 'Live TV' : streamType === 'movie' ? 'Movie' : 'Series'}
-        </Text>
-      </View>
-    </SafeAreaView>
+      {/* Channel logo flash on switch */}
+      {switchingLogo !== null && (
+        <Animated.View style={[styles.logoFlash, { opacity: logoOpacity }]}>
+          {switchingLogo ? (
+            <Image source={{ uri: switchingLogo }} style={styles.logoFlashImg} resizeMode="contain" />
+          ) : (
+            <Ionicons name="tv" size={60} color="#fff" />
+          )}
+        </Animated.View>
+      )}
+
+      {/* TV Guide overlay (auto-shows for 3 seconds) */}
+      {showGuide && (
+        <Animated.View style={[styles.guideOverlay, { opacity: guideOpacity }]}>
+          <View style={styles.guideContent}>
+            {currentChannel.streamIcon ? (
+              <Image source={{ uri: currentChannel.streamIcon }} style={styles.guideIcon} resizeMode="contain" />
+            ) : null}
+            <View style={styles.guideTextWrap}>
+              <Text style={styles.guideChannelName} numberOfLines={1}>{currentChannel.streamName}</Text>
+              {epgCurrent?.title ? (
+                <Text style={styles.guideProgramName} numberOfLines={1}>{epgCurrent.title}</Text>
+              ) : null}
+              {epgCurrent && (
+                <View style={styles.guideProgressBar}>
+                  <View style={[styles.guideProgressFill, { width: `${epgProgress * 100}%` }]} />
+                </View>
+              )}
+            </View>
+          </View>
+        </Animated.View>
+      )}
+
+      {/* Player overlay (Tubi-style) */}
+      {showOverlay && (
+        <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
+          {/* Top bar */}
+          <SafeAreaView edges={['top']} style={styles.topBar}>
+            <TouchableOpacity testID="player-back-btn" onPress={() => router.back()} style={styles.topBtn}>
+              <Ionicons name="chevron-back" size={28} color="#fff" />
+            </TouchableOpacity>
+            <View style={{ flex: 1 }} />
+          </SafeAreaView>
+
+          {/* Right side: channel up/down arrows + logo */}
+          {currentChannel.streamType === 'live' && (
+            <View style={styles.rightControls}>
+              <TouchableOpacity testID="channel-up-btn" style={styles.channelBtn} onPress={() => switchChannel('prev')}>
+                <Ionicons name="chevron-up" size={32} color="#fff" />
+              </TouchableOpacity>
+              {currentChannel.streamIcon ? (
+                <Image source={{ uri: currentChannel.streamIcon }} style={styles.rightLogo} resizeMode="contain" />
+              ) : null}
+              <TouchableOpacity testID="channel-down-btn" style={styles.channelBtn} onPress={() => switchChannel('next')}>
+                <Ionicons name="chevron-down" size={32} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Bottom info (Tubi-style) */}
+          <View style={styles.bottomOverlay}>
+            {/* Channel info */}
+            <View style={styles.bottomInfo}>
+              <Text style={styles.channelName} numberOfLines={1}>{currentChannel.streamName}</Text>
+              {epgCurrent?.title ? (
+                <Text style={styles.programName} numberOfLines={1}>{epgCurrent.title}</Text>
+              ) : null}
+              {currentChannel.streamType === 'live' && (
+                <View style={styles.liveBadge}>
+                  <Ionicons name="flash" size={12} color="#fff" />
+                  <Text style={styles.liveText}>LIVE</Text>
+                </View>
+              )}
+            </View>
+
+            {/* Progress bar */}
+            {epgCurrent && (
+              <View style={styles.progressContainer}>
+                <View style={styles.progressBar}>
+                  <View style={[styles.progressFill, { width: `${epgProgress * 100}%` }]} />
+                </View>
+                <View style={styles.progressTimes}>
+                  <Text style={styles.progressTime}>{formatTime(epgCurrent.start)}</Text>
+                  <Text style={styles.progressTime}>{formatTime(epgCurrent.end)}</Text>
+                </View>
+              </View>
+            )}
+
+            {/* Bottom controls */}
+            <SafeAreaView edges={['bottom']} style={styles.bottomControls}>
+              <TouchableOpacity testID="player-fav-btn" style={styles.bottomBtn}>
+                <Ionicons name="star-outline" size={22} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity testID="player-info-btn" style={styles.bottomBtn}>
+                <Ionicons name="information-circle-outline" size={22} color="#fff" />
+              </TouchableOpacity>
+
+              {/* Center: prev | pause/play | next */}
+              <View style={styles.centerControls}>
+                <TouchableOpacity testID="player-prev-btn" style={styles.centerBtn} onPress={() => switchChannel('prev')}>
+                  <Ionicons name="play-skip-back" size={26} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity testID="player-play-btn" style={styles.playBtn} onPress={() => {
+                  if (player.playing) player.pause();
+                  else player.play();
+                }}>
+                  <Ionicons name={isPlaying ? 'pause' : 'play'} size={30} color="#000" />
+                </TouchableOpacity>
+                <TouchableOpacity testID="player-next-btn" style={styles.centerBtn} onPress={() => switchChannel('next')}>
+                  <Ionicons name="play-skip-forward" size={26} color="#fff" />
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity testID="player-share-btn" style={styles.bottomBtn}>
+                <Ionicons name="share-outline" size={22} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity testID="player-grid-btn" style={styles.bottomBtn}>
+                <Ionicons name="grid-outline" size={22} color="#fff" />
+              </TouchableOpacity>
+            </SafeAreaView>
+          </View>
+        </Animated.View>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 12, paddingVertical: 8,
-  },
-  backBtn: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
-  headerInfo: { flex: 1, marginLeft: 4 },
-  headerTitle: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  headerSubtitle: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 2 },
-  liveBadge: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: 'rgba(239,68,68,0.2)',
-    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, gap: 4,
-  },
-  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#EF4444' },
-  liveText: { color: '#EF4444', fontSize: 10, fontWeight: '700', letterSpacing: 1 },
-
-  playerContainer: {
-    width: '100%',
-    aspectRatio: 16 / 9,
-    backgroundColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  video: {
-    width: '100%',
-    height: '100%',
-  },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center', alignItems: 'center', gap: 12,
-  },
+  container: { flex: 1, backgroundColor: '#000' },
+  blackBg: { flex: 1, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' },
+  centerWrap: { alignItems: 'center', gap: 12 },
   loadingText: { color: '#888', fontSize: 14 },
-  errorOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center', alignItems: 'center', gap: 12,
-  },
   errorText: { color: '#EF4444', fontSize: 14, textAlign: 'center', paddingHorizontal: 32 },
   retryBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -266,30 +410,81 @@ const styles = StyleSheet.create({
   },
   retryText: { color: '#fff', fontSize: 14, fontWeight: '600' },
 
-  controlsBar: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 12, paddingVertical: 8,
-    backgroundColor: 'rgba(20,25,41,0.95)',
+  // Logo flash
+  logoFlash: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)',
   },
-  controlBtn: { width: 48, height: 48, justifyContent: 'center', alignItems: 'center' },
-  controlInfo: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  controlIcon: { width: 32, height: 32, borderRadius: 6 },
-  controlTextWrap: { flex: 1 },
-  controlName: { color: '#fff', fontSize: 13, fontWeight: '600' },
-  controlEpg: { color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 1 },
+  logoFlashImg: { width: 120, height: 80 },
 
-  epgPanel: {
-    marginHorizontal: 12, marginTop: 12, padding: 16, borderRadius: 12,
+  // TV Guide overlay
+  guideOverlay: {
+    position: 'absolute', top: 60, left: 20, right: 20,
+    backgroundColor: 'rgba(0,0,0,0.85)', borderRadius: 12, padding: 16,
   },
-  epgTitle: { fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 6 },
-  epgProgramTitle: { fontSize: 16, fontWeight: '700', marginBottom: 4 },
-  epgDescription: { fontSize: 13, lineHeight: 18, marginBottom: 4 },
-  epgTime: { fontSize: 12 },
+  guideContent: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  guideIcon: { width: 48, height: 48, borderRadius: 8 },
+  guideTextWrap: { flex: 1 },
+  guideChannelName: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  guideProgramName: { color: 'rgba(255,255,255,0.6)', fontSize: 13, marginTop: 2 },
+  guideProgressBar: { height: 3, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2, marginTop: 8 },
+  guideProgressFill: { height: '100%', backgroundColor: '#00BFFF', borderRadius: 2 },
 
-  streamInfoPanel: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginHorizontal: 12, marginTop: 8, padding: 16, borderRadius: 12,
+  // Overlay
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'space-between',
   },
-  streamInfoLabel: { fontSize: 13 },
-  streamInfoValue: { fontSize: 13, fontWeight: '600' },
+
+  // Top bar
+  topBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingTop: 4 },
+  topBtn: { width: 48, height: 48, justifyContent: 'center', alignItems: 'center' },
+
+  // Right controls (channel up/down + logo)
+  rightControls: {
+    position: 'absolute', right: 16, top: '30%',
+    alignItems: 'center', gap: 8,
+  },
+  channelBtn: {
+    width: 48, height: 48, borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  rightLogo: { width: 60, height: 40, marginVertical: 4 },
+
+  // Bottom overlay
+  bottomOverlay: {
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+    background: 'transparent',
+  },
+  bottomInfo: { marginBottom: 8 },
+  channelName: { color: '#fff', fontSize: 20, fontWeight: '800' },
+  programName: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: '600', marginTop: 2 },
+  liveBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#E50914', paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 4, alignSelf: 'flex-start', marginTop: 8,
+  },
+  liveText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+
+  // Progress
+  progressContainer: { marginBottom: 8 },
+  progressBar: { height: 3, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2 },
+  progressFill: { height: '100%', backgroundColor: '#fff', borderRadius: 2 },
+  progressTimes: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
+  progressTime: { color: 'rgba(255,255,255,0.5)', fontSize: 11 },
+
+  // Bottom controls
+  bottomControls: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingTop: 4,
+  },
+  bottomBtn: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
+  centerControls: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  centerBtn: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
+  playBtn: {
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center',
+  },
 });
