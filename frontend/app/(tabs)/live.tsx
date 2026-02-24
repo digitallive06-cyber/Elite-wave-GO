@@ -135,19 +135,18 @@ export default function LiveScreen() {
       const epg = await api.getEpg(username, password, item.stream_id).catch(() => null);
       if (epg?.epg_listings?.length > 0) {
         const now = Math.floor(Date.now() / 1000);
+        const getTs = (e: any, field: 'start' | 'end') => {
+          if (field === 'start') return parseInt(e.start_timestamp) || Math.floor(new Date(e.start + ' UTC').getTime() / 1000);
+          return parseInt(e.stop_timestamp) || Math.floor(new Date(e.end + ' UTC').getTime() / 1000);
+        };
         const current = epg.epg_listings.find((e: any) => {
-          const start = new Date(e.start).getTime() / 1000;
-          const end = new Date(e.end).getTime() / 1000;
-          return now >= start && now <= end;
+          return now >= getTs(e, 'start') && now <= getTs(e, 'end');
         });
-        const next = epg.epg_listings.find((e: any) => {
-          const start = new Date(e.start).getTime() / 1000;
-          return start > now;
-        });
+        const next = epg.epg_listings.find((e: any) => getTs(e, 'start') > now);
         setPlayerEpg({ current: current || null, next: next || null });
         if (current) {
-          const start = new Date(current.start).getTime() / 1000;
-          const end = new Date(current.end).getTime() / 1000;
+          const start = getTs(current, 'start');
+          const end = getTs(current, 'end');
           setPlayerProgress(Math.min(Math.max((now - start) / (end - start), 0), 1));
         }
       }
