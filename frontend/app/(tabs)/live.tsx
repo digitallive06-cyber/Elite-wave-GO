@@ -283,19 +283,6 @@ export default function LiveScreen() {
     };
   }, [activeChannel]);
 
-  // Android back button handler for fullscreen
-  useEffect(() => {
-    if (Platform.OS !== 'android') return;
-    const handler = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (isFullscreenRef.current) {
-        exitFullscreen();
-        return true;
-      }
-      return false;
-    });
-    return () => handler.remove();
-  }, [exitFullscreen]);
-
   // Video player for inline preview
   const inlinePlayer = useVideoPlayer(streamUrl || '', (p) => {
     if (streamUrl) p.play();
@@ -306,16 +293,10 @@ export default function LiveScreen() {
   // Pause inline player when screen loses focus; resume on focus gain
   useFocusEffect(
     useCallback(() => {
-      // Returning to live screen - resume player if channel active
       if (activeChannel && streamUrl) {
         try { inlinePlayer.play(); } catch {}
       }
-      // Ensure portrait lock if not in fullscreen
-      if (Platform.OS !== 'web' && !isFullscreenRef.current) {
-        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
-      }
       return () => {
-        // Leaving live screen - pause player and lock portrait
         try { inlinePlayer.pause(); } catch {}
         if (Platform.OS !== 'web') {
           ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
