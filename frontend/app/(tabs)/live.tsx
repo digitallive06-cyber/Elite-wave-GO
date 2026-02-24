@@ -32,6 +32,9 @@ export default function LiveScreen() {
   const { username, password } = useAuth();
   const { favorites, isFavorite, toggleFavorite } = useFavorites();
   const router = useRouter();
+  const navigation = useNavigation();
+  const { width: windowW, height: windowH } = useWindowDimensions();
+  const PLAYER_HEIGHT = Platform.OS === 'web' ? 240 : Math.min(windowW * 9 / 16, 240);
 
   // Refs for active channel/stream (used in callbacks to avoid stale closures)
   const activeChannelRef = useRef<any>(null);
@@ -51,6 +54,16 @@ export default function LiveScreen() {
   const [activeChannel, setActiveChannel] = useState<any>(null);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [playerLoading, setPlayerLoading] = useState(false);
+  const [playerEpg, setPlayerEpg] = useState<{ current: any; next: any } | null>(null);
+  const [playerProgress, setPlayerProgress] = useState(0);
+
+  // Fullscreen state (same player, no navigation)
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showFsControls, setShowFsControls] = useState(true);
+  const [fsAspectMode, setFsAspectMode] = useState<ContentFit>('contain');
+  const fsControlsOpacity = useRef(new Animated.Value(1)).current;
+  const fsControlsTimer = useRef<NodeJS.Timeout | null>(null);
+  const isFullscreenRef = useRef(false);
   const [playerEpg, setPlayerEpg] = useState<{ current: any; next: any } | null>(null);
   const [playerProgress, setPlayerProgress] = useState(0);
 
