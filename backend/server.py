@@ -71,6 +71,8 @@ async def xtream_api_call(username: str, password: str, action: str, extra_param
     except httpx.TimeoutException:
         raise HTTPException(status_code=504, detail="Xtream server timeout")
     except httpx.HTTPStatusError as e:
+        if e.response.status_code == 503:
+            return []  # Rate limited, return empty gracefully
         raise HTTPException(status_code=e.response.status_code, detail="Xtream API error")
     except Exception as e:
         logger.error(f"Xtream API error: {e}")
