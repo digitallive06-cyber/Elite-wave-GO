@@ -920,7 +920,7 @@ const styles = StyleSheet.create({
 
   // Inline player
   inlinePlayerSection: { backgroundColor: '#000' },
-  inlinePlayerWrap: { width: '100%', height: PLAYER_HEIGHT, position: 'relative' },
+  inlinePlayerWrap: { width: '100%', aspectRatio: 16 / 9, maxHeight: 240, position: 'relative' },
   inlineLoading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' },
   inlineVideoTouch: { flex: 1 },
   inlineVideo: { width: '100%', height: '100%' },
