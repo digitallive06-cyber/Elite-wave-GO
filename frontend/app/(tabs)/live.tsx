@@ -532,6 +532,45 @@ export default function LiveScreen() {
       {!activeChannel && (
         <>
           <Text style={[styles.pageTitle, { color: colors.textPrimary }]}>Live TV</Text>
+
+          {/* Favorites Section */}
+          {favorites.length > 0 && (
+            <View style={styles.favSection}>
+              <Text style={[styles.favSectionTitle, { color: colors.textPrimary }]}>Favorites</Text>
+              <FlatList
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                data={favorites}
+                keyExtractor={(item) => `fav-${item.stream_id}`}
+                contentContainerStyle={styles.favList}
+                renderItem={({ item, index }) => (
+                  <TouchableOpacity
+                    testID={`live-fav-${index}`}
+                    style={[styles.favCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      const fullStream = streams.find(s => s.stream_id === item.stream_id) || {
+                        stream_id: item.stream_id,
+                        name: item.name,
+                        stream_icon: item.stream_icon,
+                        category_id: item.category_id,
+                      };
+                      playChannelInline(fullStream);
+                    }}
+                  >
+                    {item.stream_icon ? (
+                      <Image source={{ uri: item.stream_icon }} style={styles.favCardImg} resizeMode="contain" />
+                    ) : (
+                      <Ionicons name="tv-outline" size={20} color={colors.textSecondary} />
+                    )}
+                    <Text style={[styles.favCardName, { color: colors.textPrimary }]} numberOfLines={1}>{item.name}</Text>
+                    <Ionicons name="star" size={12} color="#FFD700" style={styles.favStar} />
+                  </TouchableOpacity>
+                )}
+              />
+            </View>
+          )}
+
           <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Ionicons name="search" size={18} color={colors.textSecondary} />
             <TextInput
