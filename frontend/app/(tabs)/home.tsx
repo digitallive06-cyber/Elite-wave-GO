@@ -106,7 +106,7 @@ export default function HomeScreen() {
                   <Text style={styles.heroCategoryName}>{lastWatched.category_name}</Text>
                 ) : null}
               </View>
-              <TouchableOpacity testID="hero-play-btn" style={styles.heroPlayBtn}>
+              <TouchableOpacity testID="hero-play-btn" style={styles.heroPlayBtn} onPress={() => playStream(lastWatched, lastWatched.stream_type || 'live')}>
                 <Ionicons name="play" size={32} color="#fff" />
               </TouchableOpacity>
             </View>
