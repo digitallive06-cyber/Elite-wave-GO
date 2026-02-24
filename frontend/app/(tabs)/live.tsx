@@ -26,7 +26,13 @@ const getDateStr = (date: Date) => {
 export default function LiveScreen() {
   const { colors } = useTheme();
   const { username, password } = useAuth();
+  const { favorites, isFavorite, toggleFavorite } = useFavorites();
   const router = useRouter();
+
+  // Refs for active channel/stream (used in callbacks to avoid stale closures)
+  const activeChannelRef = useRef<any>(null);
+  const streamUrlRef = useRef<string | null>(null);
+
   const [categories, setCategories] = useState<any[]>([]);
   const [streams, setStreams] = useState<any[]>([]);
   const [filteredStreams, setFilteredStreams] = useState<any[]>([]);
