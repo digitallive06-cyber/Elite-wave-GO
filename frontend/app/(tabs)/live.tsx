@@ -575,8 +575,121 @@ export default function LiveScreen() {
     );
   }
 
+  // Compute favorite data for current channel
+  const favData = activeChannel ? {
+    stream_id: activeChannel.stream_id,
+    name: activeChannel.name,
+    stream_icon: activeChannel.stream_icon || '',
+    category_id: activeChannel.category_id || '',
+  } : null;
+  const starred = activeChannel ? isFavorite(activeChannel.stream_id) : false;
+
+  // ==================== FULLSCREEN MODE ====================
+  if (isFullscreen && activeChannel) {
+    return (
+      <View style={styles.fsContainer}>
+        <StatusBar hidden />
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={toggleFsControls}
+          style={StyleSheet.absoluteFill}
+        >
+          <VideoView
+            testID="fs-video-player"
+            style={StyleSheet.absoluteFill}
+            player={inlinePlayer}
+            contentFit={fsAspectMode}
+            nativeControls={false}
+          />
+        </TouchableOpacity>
+
+        {showFsControls && (
+          <Animated.View style={[StyleSheet.absoluteFill, { opacity: fsControlsOpacity }]} pointerEvents="box-none">
+            {/* Top bar */}
+            <View style={styles.fsTopBar}>
+              <TouchableOpacity testID="fs-back-btn" style={styles.fsTopBtn} onPress={exitFullscreen}>
+                <Ionicons name="chevron-back" size={22} color="#fff" />
+              </TouchableOpacity>
+              <Text style={styles.fsChannelName} numberOfLines={1}>{activeChannel.name}</Text>
+              <TouchableOpacity
+                testID="fs-aspect-btn"
+                style={styles.fsAspectBtn}
+                onPress={() => {
+                  const idx = ASPECT_MODES.indexOf(fsAspectMode);
+                  setFsAspectMode(ASPECT_MODES[(idx + 1) % ASPECT_MODES.length]);
+                  startFsControlsTimer();
+                }}
+              >
+                <Text style={styles.fsAspectText}>{fsAspectMode.toUpperCase()}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Side channel arrows */}
+            <View style={styles.fsSideControls}>
+              <TouchableOpacity testID="fs-prev-btn" style={styles.fsSideBtn} onPress={() => switchChannel('prev')}>
+                <Ionicons name="chevron-up" size={28} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity testID="fs-next-btn" style={styles.fsSideBtn} onPress={() => switchChannel('next')}>
+                <Ionicons name="chevron-down" size={28} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Bottom overlay */}
+            <View style={styles.fsBottomOverlay}>
+              <View style={styles.fsInfoSection}>
+                <Text style={styles.fsInfoChannel} numberOfLines={1}>{activeChannel.name}</Text>
+                {playerEpg?.current?.title ? (
+                  <Text style={styles.fsInfoProgram} numberOfLines={1}>{playerEpg.current.title}</Text>
+                ) : null}
+                <View style={styles.fsLiveRow}>
+                  <View style={styles.fsLiveBadge}><Text style={styles.fsLiveText}>LIVE</Text></View>
+                </View>
+                {playerEpg?.current && (
+                  <View style={styles.fsProgressBar}>
+                    <View style={[styles.fsProgressFill, { width: `${playerProgress * 100}%` }]} />
+                  </View>
+                )}
+              </View>
+
+              {/* Bottom controls row */}
+              <View style={styles.fsControlsRow}>
+                <TouchableOpacity testID="fs-fav-btn" style={styles.fsCtrlBtn} onPress={() => {
+                  if (favData) toggleFavorite(favData);
+                  startFsControlsTimer();
+                }}>
+                  <Ionicons name={starred ? 'star' : 'star-outline'} size={22} color={starred ? '#FFD700' : '#fff'} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.fsCtrlBtn}><Ionicons name="information-circle-outline" size={22} color="#fff" /></TouchableOpacity>
+                <View style={styles.fsCenterControls}>
+                  <TouchableOpacity testID="fs-skip-back" style={styles.fsCenterBtn} onPress={() => switchChannel('prev')}>
+                    <Ionicons name="play-skip-back" size={24} color="#fff" />
+                  </TouchableOpacity>
+                  <TouchableOpacity testID="fs-play-btn" style={styles.fsPlayBtn} onPress={() => {
+                    if (inlinePlayer.playing) inlinePlayer.pause(); else inlinePlayer.play();
+                    startFsControlsTimer();
+                  }}>
+                    <Ionicons name={isPlaying ? 'pause' : 'play'} size={28} color="#000" />
+                  </TouchableOpacity>
+                  <TouchableOpacity testID="fs-skip-fwd" style={styles.fsCenterBtn} onPress={() => switchChannel('next')}>
+                    <Ionicons name="play-skip-forward" size={24} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity style={styles.fsCtrlBtn}><Ionicons name="share-outline" size={22} color="#fff" /></TouchableOpacity>
+                <TouchableOpacity testID="fs-multiview-btn" style={styles.fsCtrlBtn} onPress={openMultiview}>
+                  <Ionicons name="grid-outline" size={22} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Animated.View>
+        )}
+      </View>
+    );
+  }
+
+  // ==================== NORMAL (PORTRAIT) MODE ====================
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+      <StatusBar style="light" />
       {/* Inline Hero Player (when a channel is active) */}
       {activeChannel && (
         <View style={styles.inlinePlayerSection}>
