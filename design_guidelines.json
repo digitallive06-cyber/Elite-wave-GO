@@ -1,0 +1,115 @@
+{
+  "identity": {
+    "name": "Elite Wave",
+    "tone": "Premium, High-Tech, Fluid, Cinematic",
+    "description": "A cutting-edge IPTV experience that feels like a native streaming giant. Dark, moody, and electric.",
+    "persona_ref": "E1: The Anti-AI Designer"
+  },
+  "typography": {
+    "font_family_headings": "Outfit",
+    "font_family_body": "DM Sans",
+    "scale": {
+      "h1": "text-4xl font-extrabold tracking-tight",
+      "h2": "text-2xl font-bold tracking-tight",
+      "h3": "text-xl font-semibold",
+      "body": "text-base font-medium leading-relaxed",
+      "caption": "text-sm text-muted-foreground",
+      "tiny": "text-xs font-bold uppercase tracking-widest"
+    }
+  },
+  "colors": {
+    "mode_strategy": "adaptive",
+    "dark": {
+      "background": "#0F172A",
+      "surface": "#1E293B",
+      "surface_highlight": "#334155",
+      "text_primary": "#F1F5F9",
+      "text_secondary": "#94A3B8",
+      "border": "#334155",
+      "primary": "#00BFFF",
+      "accent": "#00FFFF",
+      "success": "#10B981",
+      "error": "#EF4444"
+    },
+    "light": {
+      "background": "#F8FAFC",
+      "surface": "#FFFFFF",
+      "surface_highlight": "#F1F5F9",
+      "text_primary": "#0F172A",
+      "text_secondary": "#64748B",
+      "border": "#E2E8F0",
+      "primary": "#007BFF",
+      "accent": "#00BFFF",
+      "success": "#059669",
+      "error": "#DC2626"
+    },
+    "gradients": {
+      "brand_wave": "from-[#00FFFF] to-[#00BFFF]",
+      "dark_overlay": "from-black/80 via-black/40 to-transparent",
+      "glass": "bg-white/10 backdrop-blur-md border border-white/20"
+    }
+  },
+  "visual_enhancers": {
+    "radius": {
+      "sm": "rounded-md",
+      "md": "rounded-xl",
+      "lg": "rounded-2xl",
+      "full": "rounded-full"
+    },
+    "shadows": {
+      "soft": "shadow-lg shadow-black/5",
+      "glow": "shadow-[0_0_20px_rgba(0,191,255,0.3)]"
+    },
+    "borders": {
+      "subtle": "border border-white/10",
+      "active": "border border-cyan-400"
+    }
+  },
+  "layout_strategies": {
+    "mobile_container": "max-w-md mx-auto h-full flex flex-col",
+    "safe_area": "pt-12 pb-6 px-6",
+    "grid_posters": "grid grid-cols-3 gap-3",
+    "list_channels": "flex flex-col gap-2"
+  },
+  "components": {
+    "HeroPlayer": {
+      "path": "/app/components/HeroPlayer.js",
+      "description": "Top section of Home. Plays last viewed channel. Features a 'Continue Watching' overlay.",
+      "styles": "h-[35vh] w-full relative overflow-hidden rounded-b-3xl shadow-2xl"
+    },
+    "ChannelList": {
+      "path": "/app/components/ChannelList.js",
+      "description": "Virtualized list for Live TV. Each item shows logo, name, and current program progress.",
+      "styles": "flex-1 overflow-y-auto"
+    },
+    "VodCard": {
+      "path": "/app/components/VodCard.js",
+      "description": "Poster card for Movies/Series. Aspect ratio 2:3.",
+      "styles": "aspect-[2/3] rounded-xl overflow-hidden relative group"
+    },
+    "TabBar": {
+      "path": "/app/components/TabBar.js",
+      "description": "Custom bottom navigation. Floating glass effect.",
+      "styles": "absolute bottom-6 left-6 right-6 h-16 bg-black/80 backdrop-blur-xl rounded-full flex items-center justify-around border border-white/10 shadow-2xl"
+    }
+  },
+  "image_urls": {
+    "app_logo": "https://customer-assets.emergentagent.com/job_8a4e8942-d64c-4c5f-b60c-9ab4e96feaed/artifacts/6fabj286_1000007447.png",
+    "hero_background": "https://images.pexels.com/photos/3389817/pexels-photo-3389817.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+    "vod_action": "https://images.unsplash.com/photo-1742822050771-588f61785322?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "vod_scifi": "https://images.pexels.com/photos/8183677/pexels-photo-8183677.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+    "vod_drama": "https://images.unsplash.com/photo-1746107690247-2342dc489c2f?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "channel_sports": "https://images.unsplash.com/photo-1760037028636-6f42428aeeee?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "channel_news": "https://images.unsplash.com/photo-1678483789470-fdaef18a1d98?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "user_avatar": "https://images.pexels.com/photos/4565706/pexels-photo-4565706.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
+  },
+  "universal_guidelines": [
+    "Do NOT use standard React Native Buttons. Create a custom TouchableOpacity component with proper active opacity and scale animation.",
+    "Use 'FlashList' from Shopify or standard 'FlatList' with optimization props for channel lists.",
+    "Ensure the 'Elite Wave' logo is always visible on the Login screen and distinct.",
+    "Implement the Theme Toggle using a Context API that switches the 'colors' object in the entire app.",
+    "All API calls to Xtream Codes must be mocked if no real credentials are provided, but structured ready for real data.",
+    "Focus on the 'Glassmorphism' feel for the bottom tab bar and overlays.",
+    "Use 'NativeWind' (Tailwind) for all styling. Class names should be used directly in components."
+  ]
+}
