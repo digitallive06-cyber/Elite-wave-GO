@@ -46,13 +46,30 @@ Elite Wave is a full-stack IPTV mobile application built with Expo (React Native
 ### EPG
 - Base64 decoded titles/descriptions
 - Current + next program on live channels
+- Batch EPG endpoint (/api/epg/batch) with rate-limiting protection (150ms delays)
+- Reliable timestamp parsing using start_timestamp/stop_timestamp (Unix epoch)
+- Progress bar showing current program progress in channel list
 
-### Settings
-- Dark/Light theme toggle
-- Account info, logout
+### Player (Tubi-style)
+- Full-screen landscape mode (expo-screen-orientation locks on entry, unlocks on back)
+- Channel up/down arrows for in-category switching
+- Channel logo flash animation on channel change
+- TV guide overlay (3 seconds) on channel switch
+- EPG progress bar and current/next program display
+
+### Live TV Screen
+- Inline hero player (16:9, max 240px height) when channel selected
+- Full TV guide below player with EPG data per channel
+- Category horizontal scroll filter
+- Tap fullscreen button → navigates to player.tsx in landscape
+
+## Changelog
+- 2025: Initial IPTV app built (login, home, live, vod, series, catchup, player)
+- 2026-02: EPG batch endpoint fixed (route ordering + timestamp parsing), landscape lock added
 
 ## Next Steps
 - Series episode drill-down and playback
 - Full EPG timeline view
 - Channel favorites on player screen
 - Catch-up playback integration
+- VOD search and filtering
