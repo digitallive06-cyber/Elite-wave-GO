@@ -101,6 +101,12 @@ export const api = {
     return res.json();
   },
 
+  getFullEpg: async (username: string, password: string, streamId: number) => {
+    const res = await fetch(`${BACKEND_URL}/api/epg/full/${streamId}?username=${username}&password=${password}`);
+    if (!res.ok) return { epg_listings: [] };
+    return res.json();
+  },
+
   getStreamUrl: async (username: string, password: string, streamId: number, streamType: string = 'live', containerExtension: string = 'ts') => {
     const res = await fetch(`${BACKEND_URL}/api/stream/url?username=${username}&password=${password}&stream_id=${streamId}&stream_type=${streamType}&container_extension=${containerExtension}`);
     if (!res.ok) throw new Error('Failed to get stream URL');
