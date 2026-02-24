@@ -333,6 +333,8 @@ export default function LiveScreen() {
     if (orientationSubRef.current) {
       ScreenOrientation.removeOrientationChangeListener(orientationSubRef.current);
     }
+    // CRITICAL: Unlock orientation so listener can fire when device rotates
+    ScreenOrientation.unlockAsync().catch(() => {});
     const sub = ScreenOrientation.addOrientationChangeListener(({ orientationInfo }) => {
       const o = orientationInfo.orientation;
       if (o === ScreenOrientation.Orientation.LANDSCAPE_LEFT || o === ScreenOrientation.Orientation.LANDSCAPE_RIGHT) {
