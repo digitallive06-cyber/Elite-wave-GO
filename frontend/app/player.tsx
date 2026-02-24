@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
   bottomOverlay: {
     paddingHorizontal: 20,
     paddingBottom: 8,
-    background: 'transparent',
+    backgroundColor: 'transparent',
   },
   bottomInfo: { marginBottom: 8 },
   channelName: { color: '#fff', fontSize: 20, fontWeight: '800' },
