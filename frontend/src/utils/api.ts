@@ -94,6 +94,12 @@ export const api = {
     return res.json();
   },
 
+  getStreamUrl: async (username: string, password: string, streamId: number, streamType: string = 'live', containerExtension: string = 'ts') => {
+    const res = await fetch(`${BACKEND_URL}/api/stream/url?username=${username}&password=${password}&stream_id=${streamId}&stream_type=${streamType}&container_extension=${containerExtension}`);
+    if (!res.ok) throw new Error('Failed to get stream URL');
+    return res.json();
+  },
+
   addHistory: async (item: any) => {
     const res = await fetch(`${BACKEND_URL}/api/user/history`, {
       method: 'POST',
