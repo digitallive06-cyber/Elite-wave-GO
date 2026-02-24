@@ -210,77 +210,15 @@ export default function LiveScreen() {
   };
 
   // Guard refs to prevent double navigation
-  const navigatingRef = useRef(false);
   const orientationSubRef = useRef<any>(null);
 
-  // Enter fullscreen - same player, just change layout + orientation
-  const enterFullscreen = useCallback(() => {
-    if (!activeChannel || isFullscreenRef.current) return;
-    isFullscreenRef.current = true;
-    setIsFullscreen(true);
-    setShowFsControls(true);
-    fsControlsOpacity.setValue(1);
-    if (Platform.OS !== 'web') {
-      // MUST unlock first (tabs layout locks PORTRAIT), then lock LANDSCAPE
-      ScreenOrientation.unlockAsync()
-        .then(() => ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE))
-        .catch(() => {});
-      NavigationBar.setVisibilityAsync('hidden').catch(() => {});
-    }
-    startFsControlsTimer();
+  // Native fullscreen via VideoView ref - this is how Lux Player and other IPTV apps do it
+  const goFullscreen = useCallback(() => {
+    if (!activeChannel || !videoViewRef.current || isFullscreenRef.current) return;
+    videoViewRef.current.enterFullscreen();
   }, [activeChannel]);
 
-  // Exit fullscreen - return to inline preview with the SAME player
-  const exitFullscreen = useCallback(() => {
-    if (!isFullscreenRef.current) return;
-    isFullscreenRef.current = false;
-    setIsFullscreen(false);
-    if (Platform.OS !== 'web') {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
-      NavigationBar.setVisibilityAsync('visible').catch(() => {});
-    }
-    if (fsControlsTimer.current) clearTimeout(fsControlsTimer.current);
-  }, []);
-
-  // Fullscreen controls auto-hide timer
-  const startFsControlsTimer = useCallback(() => {
-    if (fsControlsTimer.current) clearTimeout(fsControlsTimer.current);
-    setShowFsControls(true);
-    fsControlsOpacity.setValue(1);
-    fsControlsTimer.current = setTimeout(() => {
-      Animated.timing(fsControlsOpacity, { toValue: 0, duration: 400, useNativeDriver: true }).start(() => {
-        setShowFsControls(false);
-      });
-    }, 5000);
-  }, [fsControlsOpacity]);
-
-  const toggleFsControls = useCallback(() => {
-    if (showFsControls) {
-      if (fsControlsTimer.current) clearTimeout(fsControlsTimer.current);
-      Animated.timing(fsControlsOpacity, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
-        setShowFsControls(false);
-      });
-    } else {
-      startFsControlsTimer();
-    }
-  }, [showFsControls, fsControlsOpacity, startFsControlsTimer]);
-
-  // Switch channel in fullscreen (prev/next within current list)
-  const switchChannel = useCallback((direction: 'prev' | 'next') => {
-    const list = filteredStreams;
-    const idx = list.findIndex(s => s.stream_id === activeChannel?.stream_id);
-    if (idx === -1 || list.length <= 1) return;
-    const newIdx = direction === 'prev' ? (idx - 1 + list.length) % list.length : (idx + 1) % list.length;
-    playChannelInline(list[newIdx]);
-    startFsControlsTimer();
-  }, [filteredStreams, activeChannel, startFsControlsTimer]);
-
-  // Go fullscreen (used by inline controls + rotation)
-  const goFullscreen = useCallback(() => {
-    enterFullscreen();
-  }, [enterFullscreen]);
-
-  // Navigate to multiview from fullscreen
+  // Navigate to multiview
   const openMultiview = useCallback(() => {
     try { inlinePlayer.pause(); } catch {}
     exitFullscreen();
