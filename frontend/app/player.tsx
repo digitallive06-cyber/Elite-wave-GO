@@ -33,7 +33,6 @@ export default function PlayerScreen() {
   }>();
 
   // Track if opened in landscape (rotation-triggered) for auto-exit
-  const openedInLandscape = useRef(ww > wh);
   const hasExited = useRef(false);
 
   const [streamUrl, setStreamUrl] = useState<string | null>(
