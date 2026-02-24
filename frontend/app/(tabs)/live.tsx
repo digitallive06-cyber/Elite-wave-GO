@@ -220,32 +220,104 @@ export default function LiveScreen() {
   const navigatingRef = useRef(false);
   const orientationSubRef = useRef<any>(null);
 
-  // Go fullscreen - passes pre-resolved URL + guards against double-fire
-  const goFullscreen = useCallback(() => {
-    if (!activeChannel || navigatingRef.current) return;
-    navigatingRef.current = true;
-    // Remove orientation listener IMMEDIATELY so player.tsx's lockAsync doesn't re-trigger it
-    if (orientationSubRef.current) {
-      ScreenOrientation.removeOrientationChangeListener(orientationSubRef.current);
-      orientationSubRef.current = null;
+  // Enter fullscreen - same player, just change layout + orientation
+  const enterFullscreen = useCallback(() => {
+    if (!activeChannel || isFullscreenRef.current) return;
+    isFullscreenRef.current = true;
+    setIsFullscreen(true);
+    setShowFsControls(true);
+    fsControlsOpacity.setValue(1);
+    if (Platform.OS !== 'web') {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
+      NavigationBar.setVisibilityAsync('hidden').catch(() => {});
     }
-    const cat = categories.find(c => c.category_id === activeChannel.category_id);
-    router.push({
-      pathname: '/player',
-      params: {
-        streamId: String(activeChannel.stream_id),
-        streamName: activeChannel.name,
-        streamIcon: activeChannel.stream_icon || '',
-        streamType: 'live',
-        categoryName: cat?.category_name || '',
-        categoryId: selectedCategory || activeChannel.category_id || '',
-        containerExtension: 'ts',
-        directUrl: streamUrl || '',
-      },
-    });
-  }, [activeChannel, categories, selectedCategory, router, streamUrl]);
+    // Hide tab bar
+    try { navigation.getParent()?.setOptions({ tabBarStyle: { display: 'none' } }); } catch {}
+    // Start controls auto-hide
+    startFsControlsTimer();
+  }, [activeChannel, navigation]);
 
-  // Auto-fullscreen on landscape rotation - stored in ref so we can cancel it
+  // Exit fullscreen - return to inline preview with the SAME player
+  const exitFullscreen = useCallback(() => {
+    if (!isFullscreenRef.current) return;
+    isFullscreenRef.current = false;
+    setIsFullscreen(false);
+    if (Platform.OS !== 'web') {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+      NavigationBar.setVisibilityAsync('visible').catch(() => {});
+    }
+    // Show tab bar
+    try {
+      navigation.getParent()?.setOptions({
+        tabBarStyle: {
+          backgroundColor: colors.tabBar,
+          borderTopColor: colors.border,
+          borderTopWidth: 1,
+          height: 68, paddingTop: 8, paddingBottom: 8,
+          elevation: 20,
+        },
+      });
+    } catch {}
+    if (fsControlsTimer.current) clearTimeout(fsControlsTimer.current);
+  }, [navigation, colors]);
+
+  // Fullscreen controls auto-hide timer
+  const startFsControlsTimer = useCallback(() => {
+    if (fsControlsTimer.current) clearTimeout(fsControlsTimer.current);
+    setShowFsControls(true);
+    fsControlsOpacity.setValue(1);
+    fsControlsTimer.current = setTimeout(() => {
+      Animated.timing(fsControlsOpacity, { toValue: 0, duration: 400, useNativeDriver: true }).start(() => {
+        setShowFsControls(false);
+      });
+    }, 5000);
+  }, [fsControlsOpacity]);
+
+  const toggleFsControls = useCallback(() => {
+    if (showFsControls) {
+      if (fsControlsTimer.current) clearTimeout(fsControlsTimer.current);
+      Animated.timing(fsControlsOpacity, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
+        setShowFsControls(false);
+      });
+    } else {
+      startFsControlsTimer();
+    }
+  }, [showFsControls, fsControlsOpacity, startFsControlsTimer]);
+
+  // Switch channel in fullscreen (prev/next within current list)
+  const switchChannel = useCallback((direction: 'prev' | 'next') => {
+    const list = filteredStreams;
+    const idx = list.findIndex(s => s.stream_id === activeChannel?.stream_id);
+    if (idx === -1 || list.length <= 1) return;
+    const newIdx = direction === 'prev' ? (idx - 1 + list.length) % list.length : (idx + 1) % list.length;
+    playChannelInline(list[newIdx]);
+    startFsControlsTimer();
+  }, [filteredStreams, activeChannel, startFsControlsTimer]);
+
+  // Go fullscreen (used by inline controls + rotation)
+  const goFullscreen = useCallback(() => {
+    enterFullscreen();
+  }, [enterFullscreen]);
+
+  // Navigate to multiview from fullscreen
+  const openMultiview = useCallback(() => {
+    try { inlinePlayer.pause(); } catch {}
+    exitFullscreen();
+    setTimeout(() => {
+      router.push({
+        pathname: '/multiview',
+        params: {
+          streamId: String(activeChannel?.stream_id || ''),
+          streamName: activeChannel?.name || '',
+          streamIcon: activeChannel?.stream_icon || '',
+          categoryId: selectedCategory || activeChannel?.category_id || '',
+          directUrl: streamUrl || '',
+        },
+      });
+    }, 100);
+  }, [activeChannel, streamUrl, selectedCategory, router, exitFullscreen, inlinePlayer]);
+
+  // Auto-fullscreen on landscape rotation (bidirectional)
   useEffect(() => {
     if (Platform.OS === 'web') return;
     if (!activeChannel) {
@@ -257,18 +329,16 @@ export default function LiveScreen() {
       ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
       return;
     }
-    // Channel is playing - unlock orientation so rotation triggers the listener
-    ScreenOrientation.unlockAsync().catch(() => {});
     // Remove any existing listener before adding new one
     if (orientationSubRef.current) {
       ScreenOrientation.removeOrientationChangeListener(orientationSubRef.current);
     }
     const sub = ScreenOrientation.addOrientationChangeListener(({ orientationInfo }) => {
-      if (
-        orientationInfo.orientation === ScreenOrientation.Orientation.LANDSCAPE_LEFT ||
-        orientationInfo.orientation === ScreenOrientation.Orientation.LANDSCAPE_RIGHT
-      ) {
-        goFullscreen();
+      const o = orientationInfo.orientation;
+      if (o === ScreenOrientation.Orientation.LANDSCAPE_LEFT || o === ScreenOrientation.Orientation.LANDSCAPE_RIGHT) {
+        if (!isFullscreenRef.current) enterFullscreen();
+      } else if (o === ScreenOrientation.Orientation.PORTRAIT_UP || o === ScreenOrientation.Orientation.PORTRAIT_DOWN) {
+        if (isFullscreenRef.current) exitFullscreen();
       }
     });
     orientationSubRef.current = sub;
@@ -276,7 +346,20 @@ export default function LiveScreen() {
       ScreenOrientation.removeOrientationChangeListener(sub);
       orientationSubRef.current = null;
     };
-  }, [activeChannel, goFullscreen]);
+  }, [activeChannel, enterFullscreen, exitFullscreen]);
+
+  // Android back button handler for fullscreen
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const handler = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (isFullscreenRef.current) {
+        exitFullscreen();
+        return true;
+      }
+      return false;
+    });
+    return () => handler.remove();
+  }, [exitFullscreen]);
 
   // Video player for inline preview
   const inlinePlayer = useVideoPlayer(streamUrl || '', (p) => {
