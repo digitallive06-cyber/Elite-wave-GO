@@ -203,79 +203,64 @@ export default function LiveScreen() {
     loadFullEpg(item.stream_id);
   };
 
-  // Guard refs to prevent double navigation
-  const orientationSubRef = useRef<any>(null);
+  // Fullscreen: navigate to player.tsx with pre-resolved URL
+  const navigatingRef = useRef(false);
 
-  // Native fullscreen via VideoView ref - this is how Lux Player and other IPTV apps do it
   const goFullscreen = useCallback(() => {
-    if (!activeChannel || !videoViewRef.current || isFullscreenRef.current) return;
-    videoViewRef.current.enterFullscreen();
-  }, [activeChannel]);
+    if (!activeChannel || navigatingRef.current) return;
+    navigatingRef.current = true;
+    // Pause inline player to prevent double audio
+    try { inlinePlayer.pause(); } catch {}
+    const cat = categories.find((c: any) => c.category_id === activeChannel.category_id);
+    router.push({
+      pathname: '/player',
+      params: {
+        streamId: String(activeChannel.stream_id),
+        streamName: activeChannel.name,
+        streamIcon: activeChannel.stream_icon || '',
+        streamType: 'live',
+        categoryName: cat?.category_name || '',
+        categoryId: selectedCategory || activeChannel.category_id || '',
+        containerExtension: 'ts',
+        directUrl: streamUrl || '',
+      },
+    });
+  }, [activeChannel, categories, selectedCategory, router, streamUrl, inlinePlayer]);
 
   // Navigate to multiview
   const openMultiview = useCallback(() => {
+    if (navigatingRef.current) return;
+    navigatingRef.current = true;
     try { inlinePlayer.pause(); } catch {}
-    // Exit native fullscreen first if active
-    if (isFullscreenRef.current && videoViewRef.current) {
-      videoViewRef.current.exitFullscreen();
-    }
-    setTimeout(() => {
-      router.push({
-        pathname: '/multiview',
-        params: {
-          streamId: String(activeChannel?.stream_id || ''),
-          streamName: activeChannel?.name || '',
-          streamIcon: activeChannel?.stream_icon || '',
-          categoryId: selectedCategory || activeChannel?.category_id || '',
-          directUrl: streamUrl || '',
-        },
-      });
-    }, 100);
+    router.push({
+      pathname: '/multiview',
+      params: {
+        streamId: String(activeChannel?.stream_id || ''),
+        streamName: activeChannel?.name || '',
+        streamIcon: activeChannel?.stream_icon || '',
+        categoryId: selectedCategory || activeChannel?.category_id || '',
+        directUrl: streamUrl || '',
+      },
+    });
   }, [activeChannel, streamUrl, selectedCategory, router, inlinePlayer]);
 
-  // Auto-fullscreen on landscape rotation (bidirectional)
+  // Rotation detection via Dimensions API (more reliable than ScreenOrientation listener)
   useEffect(() => {
     if (Platform.OS === 'web') return;
-    if (!activeChannel) {
-      // No channel playing - lock portrait and remove listener
-      if (orientationSubRef.current) {
-        ScreenOrientation.removeOrientationChangeListener(orientationSubRef.current);
-        orientationSubRef.current = null;
-      }
+    if (!activeChannel || !streamUrl) {
+      // No channel - ensure portrait lock
       ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
       return;
     }
-    // Remove any existing listener before adding new one
-    if (orientationSubRef.current) {
-      ScreenOrientation.removeOrientationChangeListener(orientationSubRef.current);
-      orientationSubRef.current = null;
-    }
-    // CRITICAL: Must await unlock before registering listener
-    let cancelled = false;
-    const setup = async () => {
-      try {
-        await ScreenOrientation.unlockAsync();
-      } catch {}
-      if (cancelled) return;
-      const sub = ScreenOrientation.addOrientationChangeListener(({ orientationInfo }) => {
-        const o = orientationInfo.orientation;
-        if (o === ScreenOrientation.Orientation.LANDSCAPE_LEFT || o === ScreenOrientation.Orientation.LANDSCAPE_RIGHT) {
-          if (!isFullscreenRef.current && videoViewRef.current) {
-            videoViewRef.current.enterFullscreen();
-          }
-        }
-      });
-      orientationSubRef.current = sub;
-    };
-    setup();
-    return () => {
-      cancelled = true;
-      if (orientationSubRef.current) {
-        ScreenOrientation.removeOrientationChangeListener(orientationSubRef.current);
-        orientationSubRef.current = null;
+    // Unlock orientation so rotation can be detected
+    ScreenOrientation.unlockAsync().catch(() => {});
+    const sub = Dimensions.addEventListener('change', ({ window }) => {
+      if (window.width > window.height && !navigatingRef.current) {
+        goFullscreen();
       }
-    };
-  }, [activeChannel]);
+    });
+    return () => sub.remove();
+  }, [activeChannel, streamUrl, goFullscreen]);
 
   // Video player for inline preview
   const inlinePlayer = useVideoPlayer(streamUrl || '', (p) => {
