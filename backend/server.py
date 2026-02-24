@@ -200,7 +200,105 @@ async def get_recent_series(username: str, password: str, limit: int = 20):
         return sorted_data[:limit]
     return []
 
-# User History
+# Stream URL generation and resolution (handles LB redirects)
+class StreamUrlRequest(BaseModel):
+    username: str
+    password: str
+    stream_id: int
+    stream_type: str = "live"  # live, movie, series
+    container_extension: str = "ts"
+
+@api_router.post("/stream/resolve")
+async def resolve_stream_url(req: StreamUrlRequest):
+    """Generate stream URL and resolve LB redirects to get the actual playable URL"""
+    # Build the base stream URL
+    if req.stream_type == "live":
+        path = f"/live/{req.username}/{req.password}/{req.stream_id}.m3u8"
+    elif req.stream_type == "movie":
+        ext = req.container_extension or "mp4"
+        path = f"/movie/{req.username}/{req.password}/{req.stream_id}.{ext}"
+    elif req.stream_type == "series":
+        ext = req.container_extension or "mp4"
+        path = f"/series/{req.username}/{req.password}/{req.stream_id}.{ext}"
+    else:
+        path = f"/live/{req.username}/{req.password}/{req.stream_id}.m3u8"
+
+    base_url = f"{XTREAM_DNS}{path}"
+
+    # Try to resolve the URL by following redirects to handle LB
+    resolved_url = base_url
+    try:
+        async with httpx.AsyncClient(timeout=10.0, verify=False, follow_redirects=False) as client_http:
+            response = await client_http.head(base_url)
+            if response.status_code in (301, 302, 303, 307, 308):
+                redirect_url = response.headers.get("location", "")
+                if redirect_url:
+                    resolved_url = redirect_url
+                    logger.info(f"Stream {req.stream_id} redirected to LB: {redirect_url}")
+            elif response.status_code == 200:
+                resolved_url = base_url
+            else:
+                # If HEAD fails, try with .ts for live
+                if req.stream_type == "live":
+                    ts_path = f"/live/{req.username}/{req.password}/{req.stream_id}.ts"
+                    ts_url = f"{XTREAM_DNS}{ts_path}"
+                    response2 = await client_http.head(ts_url)
+                    if response2.status_code in (301, 302, 303, 307, 308):
+                        redirect_url = response2.headers.get("location", "")
+                        if redirect_url:
+                            resolved_url = redirect_url
+                    elif response2.status_code == 200:
+                        resolved_url = ts_url
+    except Exception as e:
+        logger.warning(f"Could not resolve stream URL, using base: {e}")
+
+    # Also provide alternate URLs for fallback
+    urls = {
+        "resolved_url": resolved_url,
+        "m3u8_url": f"{XTREAM_DNS}/live/{req.username}/{req.password}/{req.stream_id}.m3u8" if req.stream_type == "live" else resolved_url,
+        "ts_url": f"{XTREAM_DNS}/live/{req.username}/{req.password}/{req.stream_id}.ts" if req.stream_type == "live" else resolved_url,
+        "raw_url": base_url,
+        "stream_type": req.stream_type,
+    }
+    return urls
+
+@api_router.get("/stream/url")
+async def get_stream_url(username: str, password: str, stream_id: int, stream_type: str = "live", container_extension: str = "ts"):
+    """Simple GET endpoint for stream URL generation"""
+    if stream_type == "live":
+        url = f"{XTREAM_DNS}/live/{username}/{password}/{stream_id}.m3u8"
+        ts_url = f"{XTREAM_DNS}/live/{username}/{password}/{stream_id}.ts"
+    elif stream_type == "movie":
+        ext = container_extension or "mp4"
+        url = f"{XTREAM_DNS}/movie/{username}/{password}/{stream_id}.{ext}"
+        ts_url = url
+    elif stream_type == "series":
+        ext = container_extension or "mp4"
+        url = f"{XTREAM_DNS}/series/{username}/{password}/{stream_id}.{ext}"
+        ts_url = url
+    else:
+        url = f"{XTREAM_DNS}/live/{username}/{password}/{stream_id}.m3u8"
+        ts_url = url
+
+    # Resolve redirects for LB
+    resolved_url = url
+    try:
+        async with httpx.AsyncClient(timeout=10.0, verify=False, follow_redirects=False) as client_http:
+            response = await client_http.head(url)
+            if response.status_code in (301, 302, 303, 307, 308):
+                redirect_url = response.headers.get("location", "")
+                if redirect_url:
+                    resolved_url = redirect_url
+    except Exception as e:
+        logger.warning(f"Could not resolve redirect: {e}")
+
+    return {
+        "url": resolved_url,
+        "fallback_url": ts_url,
+        "raw_url": url,
+    }
+
+
 @api_router.post("/user/history")
 async def add_history(item: HistoryItem):
     doc = item.dict()
