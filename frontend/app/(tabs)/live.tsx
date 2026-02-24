@@ -266,9 +266,9 @@ export default function LiveScreen() {
       const sub = ScreenOrientation.addOrientationChangeListener(({ orientationInfo }) => {
         const o = orientationInfo.orientation;
         if (o === ScreenOrientation.Orientation.LANDSCAPE_LEFT || o === ScreenOrientation.Orientation.LANDSCAPE_RIGHT) {
-          if (!isFullscreenRef.current) enterFullscreen();
-        } else if (o === ScreenOrientation.Orientation.PORTRAIT_UP || o === ScreenOrientation.Orientation.PORTRAIT_DOWN) {
-          if (isFullscreenRef.current) exitFullscreen();
+          if (!isFullscreenRef.current && videoViewRef.current) {
+            videoViewRef.current.enterFullscreen();
+          }
         }
       });
       orientationSubRef.current = sub;
@@ -281,7 +281,7 @@ export default function LiveScreen() {
         orientationSubRef.current = null;
       }
     };
-  }, [activeChannel, enterFullscreen, exitFullscreen]);
+  }, [activeChannel]);
 
   // Android back button handler for fullscreen
   useEffect(() => {
