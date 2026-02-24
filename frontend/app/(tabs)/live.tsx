@@ -193,15 +193,6 @@ export default function LiveScreen() {
     loadFullEpg(item.stream_id);
   };
 
-  // Pause inline player when screen loses focus (going to fullscreen → no double audio)
-  useFocusEffect(
-    useCallback(() => {
-      return () => {
-        try { inlinePlayer.pause(); } catch (e) {}
-      };
-    }, [inlinePlayer])
-  );
-
   // Go fullscreen - pauses inline player + passes pre-resolved URL (no restart)
   const goFullscreen = useCallback(() => {
     if (!activeChannel) return;
