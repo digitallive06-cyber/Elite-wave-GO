@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ThemeProvider, useTheme } from '../src/contexts/ThemeContext';
 import { AuthProvider } from '../src/contexts/AuthContext';
+import { FavoritesProvider } from '../src/contexts/FavoritesContext';
 
 function RootLayoutInner() {
   const { mode } = useTheme();
