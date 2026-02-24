@@ -322,7 +322,7 @@ export default function PlayerScreen() {
 
       {/* Player overlay (Tubi-style) - pointerEvents box-none so background taps reach outer TouchableOpacity */}
       {showOverlay && (
-        <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]} pointerEvents="box-none">
+        <Animated.View style={[styles.overlay, { opacity: overlayOpacity, pointerEvents: 'box-none' }]}>
           {/* Top bar */}
           <SafeAreaView edges={['top']} style={styles.topBar}>
             <TouchableOpacity testID="player-back-btn" onPress={() => {
