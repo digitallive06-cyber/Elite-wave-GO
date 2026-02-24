@@ -174,17 +174,7 @@ def decode_epg_listings(data):
         return data
     return data
 
-@api_router.get("/epg/{stream_id}")
-async def get_epg(stream_id: int, username: str, password: str):
-    data = await xtream_api_call(username, password, "get_short_epg", {"stream_id": str(stream_id)})
-    return decode_epg_listings(data)
-
-@api_router.get("/epg/full/{stream_id}")
-async def get_full_epg(stream_id: int, username: str, password: str):
-    data = await xtream_api_call(username, password, "get_simple_data_table", {"stream_id": str(stream_id)})
-    return decode_epg_listings(data)
-
-# Batch EPG endpoint - fetches EPG for multiple streams sequentially to avoid rate limiting
+# Batch EPG endpoint - MUST be before parameterized routes
 import asyncio
 
 @api_router.get("/epg/batch")
@@ -201,6 +191,16 @@ async def get_batch_epg(username: str, password: str, stream_ids: str):
             results[str(sid)] = {"epg_listings": []}
         await asyncio.sleep(0.15)  # 150ms delay between requests to avoid 503
     return results
+
+@api_router.get("/epg/{stream_id}")
+async def get_epg(stream_id: int, username: str, password: str):
+    data = await xtream_api_call(username, password, "get_short_epg", {"stream_id": str(stream_id)})
+    return decode_epg_listings(data)
+
+@api_router.get("/epg/full/{stream_id}")
+async def get_full_epg(stream_id: int, username: str, password: str):
+    data = await xtream_api_call(username, password, "get_simple_data_table", {"stream_id": str(stream_id)})
+    return decode_epg_listings(data)
 
 
 @api_router.get("/vod/recent")
