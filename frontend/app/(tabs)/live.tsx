@@ -56,18 +56,21 @@ export default function LiveScreen() {
   }, [username, password]);
 
   const loadEpgBatch = async (streamList: any[]) => {
-    const epgMap: { [key: number]: any } = {};
-    const promises = streamList.map(async (stream) => {
-      try {
-        const data = await api.getEpg(username, password, stream.stream_id);
-        if (data?.epg_listings?.length > 0) {
-          const now = Math.floor(Date.now() / 1000);
-          const current = data.epg_listings.find((e: any) => {
+    const ids = streamList.filter(s => s.epg_channel_id).map(s => s.stream_id);
+    if (ids.length === 0) return;
+    try {
+      const batchData = await api.getBatchEpg(username, password, ids);
+      const epgMap: { [key: number]: any } = {};
+      const now = Math.floor(Date.now() / 1000);
+      for (const [sid, data] of Object.entries(batchData) as any) {
+        const listings = data?.epg_listings || [];
+        if (listings.length > 0) {
+          const current = listings.find((e: any) => {
             const start = new Date(e.start).getTime() / 1000;
             const end = new Date(e.end).getTime() / 1000;
             return now >= start && now <= end;
           });
-          const next = data.epg_listings.find((e: any) => {
+          const next = listings.find((e: any) => {
             const start = new Date(e.start).getTime() / 1000;
             return start > now;
           });
@@ -77,12 +80,11 @@ export default function LiveScreen() {
             const end = new Date(current.end).getTime() / 1000;
             progress = Math.min(Math.max((now - start) / (end - start), 0), 1);
           }
-          epgMap[stream.stream_id] = { current, next, progress };
+          epgMap[parseInt(sid)] = { current, next, progress };
         }
-      } catch (e) { /* skip */ }
-    });
-    await Promise.allSettled(promises);
-    setEpgData(prev => ({ ...prev, ...epgMap }));
+      }
+      setEpgData(prev => ({ ...prev, ...epgMap }));
+    } catch (e) { console.error('Batch EPG error:', e); }
   };
 
   useEffect(() => {
