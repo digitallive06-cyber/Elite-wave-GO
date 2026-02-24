@@ -15,7 +15,9 @@ import { useTheme } from '../src/contexts/ThemeContext';
 import { useAuth } from '../src/contexts/AuthContext';
 import { api } from '../src/utils/api';
 
-const { width: SW, height: SH } = Dimensions.get('window');
+const ASPECT_MODES = ['contain', 'cover', 'fill'] as const;
+type ContentFit = typeof ASPECT_MODES[number];
+const ASPECT_LABELS: Record<ContentFit, string> = { contain: 'FIT', cover: 'FILL', fill: 'STRETCH' };
 
 export default function PlayerScreen() {
   const { colors } = useTheme();
@@ -29,11 +31,15 @@ export default function PlayerScreen() {
     categoryName: string;
     categoryId: string;
     containerExtension: string;
+    directUrl: string;
   }>();
 
-  const [streamUrl, setStreamUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [streamUrl, setStreamUrl] = useState<string | null>(
+    params.directUrl && params.directUrl.length > 5 ? params.directUrl : null
+  );
+  const [loading, setLoading] = useState(!params.directUrl || params.directUrl.length <= 5);
   const [error, setError] = useState('');
+  const [contentFit, setContentFit] = useState<ContentFit>('contain');
   const [epgCurrent, setEpgCurrent] = useState<any>(null);
   const [epgNext, setEpgNext] = useState<any>(null);
   const [epgProgress, setEpgProgress] = useState(0);
@@ -48,8 +54,8 @@ export default function PlayerScreen() {
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const overlayTimer = useRef<NodeJS.Timeout | null>(null);
   const guideTimer = useRef<NodeJS.Timeout | null>(null);
+  const isFirstMount = useRef(true);
 
-  // Current channel info
   const [currentChannel, setCurrentChannel] = useState({
     streamId: parseInt(params.streamId || '0'),
     streamName: params.streamName || 'Unknown',
@@ -60,7 +66,7 @@ export default function PlayerScreen() {
     containerExtension: params.containerExtension || 'ts',
   });
 
-  // Lock to landscape on mount, hide system bars, unlock on unmount
+  // Lock landscape + hide system bars on mount
   useEffect(() => {
     if (Platform.OS !== 'web') {
       ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
@@ -74,23 +80,16 @@ export default function PlayerScreen() {
     };
   }, []);
 
-  // Load channel list for category (for prev/next switching)
+  // Load channel list for prev/next switching
   useEffect(() => {
-    if (currentChannel.streamType === 'live' && currentChannel.categoryId) {
-      api.getLiveStreams(username, password, currentChannel.categoryId).then(data => {
-        const arr = Array.isArray(data) ? data : [];
-        setChannelList(arr);
-        const idx = arr.findIndex((s: any) => s.stream_id === currentChannel.streamId);
-        if (idx >= 0) setCurrentIndex(idx);
-      }).catch(() => {});
-    } else if (currentChannel.streamType === 'live') {
-      api.getLiveStreams(username, password).then(data => {
-        const arr = Array.isArray(data) ? data : [];
-        setChannelList(arr);
-        const idx = arr.findIndex((s: any) => s.stream_id === currentChannel.streamId);
-        if (idx >= 0) setCurrentIndex(idx);
-      }).catch(() => {});
-    }
+    if (currentChannel.streamType !== 'live') return;
+    const catId = currentChannel.categoryId || undefined;
+    api.getLiveStreams(username, password, catId).then(data => {
+      const arr = Array.isArray(data) ? data : [];
+      setChannelList(arr);
+      const idx = arr.findIndex((s: any) => s.stream_id === currentChannel.streamId);
+      if (idx >= 0) setCurrentIndex(idx);
+    }).catch(() => {});
   }, [currentChannel.categoryId, currentChannel.streamType]);
 
   // Resolve stream URL
@@ -100,15 +99,6 @@ export default function PlayerScreen() {
     try {
       const data = await api.getStreamUrl(username, password, streamId, sType, ext);
       setStreamUrl(data.url);
-      // Save to history
-      api.addHistory({
-        username,
-        stream_id: currentChannel.streamId,
-        stream_name: currentChannel.streamName,
-        stream_icon: currentChannel.streamIcon,
-        stream_type: currentChannel.streamType,
-        category_name: currentChannel.categoryName,
-      }).catch(() => {});
     } catch (e: any) {
       setError(e.message || 'Failed to load stream');
     } finally {
@@ -116,8 +106,34 @@ export default function PlayerScreen() {
     }
   }, [username, password]);
 
+  // On channel change: use directUrl on first mount if provided, otherwise resolve
   useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      if (params.directUrl && params.directUrl.length > 5) {
+        // Use pre-resolved URL — no re-resolution needed
+        setStreamUrl(params.directUrl);
+        setLoading(false);
+        api.addHistory({
+          username,
+          stream_id: currentChannel.streamId,
+          stream_name: currentChannel.streamName,
+          stream_icon: currentChannel.streamIcon,
+          stream_type: currentChannel.streamType,
+          category_name: currentChannel.categoryName,
+        }).catch(() => {});
+        return;
+      }
+    }
     resolveUrl(currentChannel.streamId, currentChannel.streamType, currentChannel.containerExtension);
+    api.addHistory({
+      username,
+      stream_id: currentChannel.streamId,
+      stream_name: currentChannel.streamName,
+      stream_icon: currentChannel.streamIcon,
+      stream_type: currentChannel.streamType,
+      category_name: currentChannel.categoryName,
+    }).catch(() => {});
   }, [currentChannel.streamId]);
 
   // Load EPG
@@ -131,17 +147,14 @@ export default function PlayerScreen() {
           if (field === 'start') return parseInt(e.start_timestamp) || Math.floor(new Date(e.start + ' UTC').getTime() / 1000);
           return parseInt(e.stop_timestamp) || Math.floor(new Date(e.end + ' UTC').getTime() / 1000);
         };
-        const current = data.epg_listings.find((e: any) => {
-          return now >= getTs(e, 'start') && now <= getTs(e, 'end');
-        });
+        const current = data.epg_listings.find((e: any) => now >= getTs(e, 'start') && now <= getTs(e, 'end'));
         const next = data.epg_listings.find((e: any) => getTs(e, 'start') > now);
         setEpgCurrent(current || null);
         setEpgNext(next || null);
         if (current) {
           const start = getTs(current, 'start');
           const end = getTs(current, 'end');
-          const prog = (now - start) / (end - start);
-          setEpgProgress(Math.min(Math.max(prog, 0), 1));
+          setEpgProgress(Math.min(Math.max((now - start) / (end - start), 0), 1));
         }
       }
     } catch (e) { /* skip */ }
@@ -149,7 +162,7 @@ export default function PlayerScreen() {
 
   useEffect(() => { loadEpg(currentChannel.streamId); }, [currentChannel.streamId, loadEpg]);
 
-  // EPG progress updater
+  // EPG progress tick
   useEffect(() => {
     if (!epgCurrent) return;
     const interval = setInterval(() => {
@@ -165,31 +178,39 @@ export default function PlayerScreen() {
   const player = useVideoPlayer(streamUrl || '', (p) => {
     if (streamUrl) p.play();
   });
-
   const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
 
-  // Auto-hide overlay after 5 seconds
-  const scheduleHideOverlay = () => {
+  // Overlay auto-hide
+  const scheduleHideOverlay = useCallback(() => {
     if (overlayTimer.current) clearTimeout(overlayTimer.current);
     overlayTimer.current = setTimeout(() => {
       Animated.timing(overlayOpacity, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => setShowOverlay(false));
     }, 5000);
-  };
+  }, [overlayOpacity]);
 
-  const toggleOverlay = () => {
+  const showOverlayNow = useCallback(() => {
+    setShowOverlay(true);
+    overlayOpacity.setValue(1);
+    scheduleHideOverlay();
+  }, [overlayOpacity, scheduleHideOverlay]);
+
+  const hideOverlayNow = useCallback(() => {
+    if (overlayTimer.current) clearTimeout(overlayTimer.current);
+    Animated.timing(overlayOpacity, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => setShowOverlay(false));
+  }, [overlayOpacity]);
+
+  const toggleOverlay = useCallback(() => {
     if (showOverlay) {
-      if (overlayTimer.current) clearTimeout(overlayTimer.current);
-      Animated.timing(overlayOpacity, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => setShowOverlay(false));
+      hideOverlayNow();
     } else {
-      setShowOverlay(true);
-      Animated.timing(overlayOpacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
-      scheduleHideOverlay();
+      showOverlayNow();
     }
-  };
+  }, [showOverlay, showOverlayNow, hideOverlayNow]);
 
-  // Show TV guide overlay for 3 seconds on channel change
+  // Show TV guide for 3s on channel change
   const showTvGuide = () => {
     setShowGuide(true);
+    guideOpacity.setValue(0);
     Animated.timing(guideOpacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
     if (guideTimer.current) clearTimeout(guideTimer.current);
     guideTimer.current = setTimeout(() => {
@@ -197,7 +218,7 @@ export default function PlayerScreen() {
     }, 3000);
   };
 
-  // Flash channel logo on switch
+  // Flash logo on channel switch
   const flashLogo = (icon: string) => {
     setSwitchingLogo(icon);
     Animated.sequence([
@@ -207,24 +228,21 @@ export default function PlayerScreen() {
     ]).start(() => setSwitchingLogo(null));
   };
 
-  // Switch to next/prev channel
+  // Switch channel
   const switchChannel = (direction: 'next' | 'prev') => {
     if (channelList.length === 0) return;
-    let newIdx = direction === 'next'
+    const newIdx = direction === 'next'
       ? (currentIndex + 1) % channelList.length
       : (currentIndex - 1 + channelList.length) % channelList.length;
     const ch = channelList[newIdx];
     if (!ch) return;
     setCurrentIndex(newIdx);
-    setCurrentChannel({
+    setCurrentChannel(prev => ({
+      ...prev,
       streamId: ch.stream_id,
       streamName: ch.name,
       streamIcon: ch.stream_icon || '',
-      streamType: 'live',
-      categoryName: currentChannel.categoryName,
-      categoryId: currentChannel.categoryId,
-      containerExtension: 'ts',
-    });
+    }));
     flashLogo(ch.stream_icon || '');
     showTvGuide();
     setEpgCurrent(null);
@@ -232,17 +250,23 @@ export default function PlayerScreen() {
     setEpgProgress(0);
   };
 
-  const formatTime = (dateStr: string) => {
-    try {
-      return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch { return ''; }
+  // Cycle aspect ratio
+  const cycleAspect = () => {
+    setContentFit(prev => {
+      const idx = ASPECT_MODES.indexOf(prev);
+      return ASPECT_MODES[(idx + 1) % ASPECT_MODES.length];
+    });
   };
 
+  const formatTime = (dateStr: string) => {
+    try { return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+    catch { return ''; }
+  };
+
+  // Show overlay + guide when stream loads
   useEffect(() => {
     if (!loading && !error) {
-      setShowOverlay(true);
-      overlayOpacity.setValue(1);
-      scheduleHideOverlay();
+      showOverlayNow();
       showTvGuide();
     }
     return () => {
@@ -251,45 +275,70 @@ export default function PlayerScreen() {
     };
   }, [loading, error]);
 
+  const handleBack = () => {
+    if (Platform.OS !== 'web') {
+      ScreenOrientation.unlockAsync().catch(() => {});
+      NavigationBar.setVisibilityAsync('visible').catch(() => {});
+    }
+    router.back();
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar hidden={true} />
-      {/* Background touch layer - ALWAYS responds to taps to toggle overlay */}
-      <TouchableOpacity activeOpacity={1} onPress={toggleOverlay} style={StyleSheet.absoluteFill}>
-        {/* Video */}
-        {streamUrl && !loading ? (
-          <VideoView
-            testID="video-player"
-            style={StyleSheet.absoluteFill}
-            player={player}
-            allowsPictureInPicture
-            contentFit="cover"
-            nativeControls={false}
-          />
-        ) : (
-          <View style={styles.blackBg}>
-            {loading ? (
-              <View style={styles.centerWrap}>
-                <ActivityIndicator size="large" color="#00BFFF" />
-                <Text style={styles.loadingText}>Loading stream...</Text>
-              </View>
-            ) : error ? (
-              <View style={styles.centerWrap}>
-                <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
-                <Text style={styles.errorText}>{error}</Text>
-                <TouchableOpacity testID="player-retry-btn" style={styles.retryBtn} onPress={() => resolveUrl(currentChannel.streamId, currentChannel.streamType, currentChannel.containerExtension)}>
-                  <Ionicons name="refresh" size={20} color="#fff" />
-                  <Text style={styles.retryText}>Retry</Text>
-                </TouchableOpacity>
-              </View>
-            ) : null}
-          </View>
-        )}
-      </TouchableOpacity>
 
-      {/* Channel logo flash on switch */}
+      {/* === VIDEO (always rendered) === */}
+      {streamUrl ? (
+        <VideoView
+          testID="video-player"
+          style={StyleSheet.absoluteFill}
+          player={player}
+          allowsPictureInPicture
+          contentFit={contentFit}
+          nativeControls={false}
+        />
+      ) : null}
+
+      {/* === LOADING / ERROR (non-interactive) === */}
+      {(loading || !!error) && (
+        <View style={[StyleSheet.absoluteFill, styles.loadingBg]} pointerEvents="none">
+          {loading ? (
+            <View style={styles.centerWrap}>
+              <ActivityIndicator size="large" color="#00BFFF" />
+              <Text style={styles.loadingText}>Loading stream...</Text>
+            </View>
+          ) : (
+            <View style={styles.centerWrap}>
+              <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+        </View>
+      )}
+      {/* Error retry button (interactive, separate from non-interactive overlay) */}
+      {!!error && (
+        <View style={styles.retryWrap}>
+          <TouchableOpacity testID="player-retry-btn" style={styles.retryBtn}
+            onPress={() => resolveUrl(currentChannel.streamId, currentChannel.streamType, currentChannel.containerExtension)}>
+            <Ionicons name="refresh" size={20} color="#fff" />
+            <Text style={styles.retryText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* === WHEN OVERLAY HIDDEN: invisible tap layer to show controls === */}
+      {!showOverlay && (
+        <TouchableOpacity
+          testID="player-tap-show"
+          activeOpacity={1}
+          style={StyleSheet.absoluteFill}
+          onPress={toggleOverlay}
+        />
+      )}
+
+      {/* === LOGO FLASH (non-interactive) === */}
       {switchingLogo !== null && (
-        <Animated.View style={[styles.logoFlash, { opacity: logoOpacity }]}>
+        <Animated.View style={[styles.logoFlash, { opacity: logoOpacity }]} pointerEvents="none">
           {switchingLogo ? (
             <Image source={{ uri: switchingLogo }} style={styles.logoFlashImg} resizeMode="contain" />
           ) : (
@@ -298,9 +347,9 @@ export default function PlayerScreen() {
         </Animated.View>
       )}
 
-      {/* TV Guide overlay (auto-shows for 3 seconds) */}
+      {/* === TV GUIDE OVERLAY (non-interactive, shows 3s on channel change) === */}
       {showGuide && (
-        <Animated.View style={[styles.guideOverlay, { opacity: guideOpacity }]}>
+        <Animated.View style={[styles.guideOverlay, { opacity: guideOpacity }]} pointerEvents="none">
           <View style={styles.guideContent}>
             {currentChannel.streamIcon ? (
               <Image source={{ uri: currentChannel.streamIcon }} style={styles.guideIcon} resizeMode="contain" />
@@ -320,23 +369,36 @@ export default function PlayerScreen() {
         </Animated.View>
       )}
 
-      {/* Player overlay (Tubi-style) - pointerEvents box-none so background taps reach outer TouchableOpacity */}
+      {/* === WHEN OVERLAY VISIBLE: gradient bg + controls === */}
       {showOverlay && (
-        <Animated.View style={[styles.overlay, { opacity: overlayOpacity, pointerEvents: 'box-none' }]}>
-          {/* Top bar */}
-          <SafeAreaView edges={['top']} style={styles.topBar}>
-            <TouchableOpacity testID="player-back-btn" onPress={() => {
-              if (Platform.OS !== 'web') ScreenOrientation.unlockAsync().catch(() => {});
-              router.back();
-            }} style={styles.topBtn}>
+        <Animated.View
+          pointerEvents="box-none"
+          style={[StyleSheet.absoluteFill, { opacity: overlayOpacity }]}
+        >
+          {/* Background tap to HIDE overlay */}
+          <TouchableOpacity
+            testID="player-tap-hide"
+            activeOpacity={1}
+            style={StyleSheet.absoluteFill}
+            onPress={toggleOverlay}
+          />
+
+          {/* Top bar — box-none wrapper so background tap still works */}
+          <SafeAreaView edges={['top', 'left', 'right']} style={styles.topBar} pointerEvents="box-none">
+            <TouchableOpacity testID="player-back-btn" onPress={handleBack} style={styles.topBtn}>
               <Ionicons name="chevron-back" size={28} color="#fff" />
             </TouchableOpacity>
             <View style={{ flex: 1 }} />
+            {/* Aspect ratio button */}
+            <TouchableOpacity testID="player-aspect-btn" onPress={cycleAspect} style={styles.aspectBtn}>
+              <Ionicons name="scan-outline" size={18} color="#fff" />
+              <Text style={styles.aspectLabel}>{ASPECT_LABELS[contentFit]}</Text>
+            </TouchableOpacity>
           </SafeAreaView>
 
-          {/* Right side: channel up/down arrows + logo */}
+          {/* Right: channel up/down + logo */}
           {currentChannel.streamType === 'live' && (
-            <View style={styles.rightControls}>
+            <View style={styles.rightControls} pointerEvents="box-none">
               <TouchableOpacity testID="channel-up-btn" style={styles.channelBtn} onPress={() => switchChannel('prev')}>
                 <Ionicons name="chevron-up" size={32} color="#fff" />
               </TouchableOpacity>
@@ -349,13 +411,13 @@ export default function PlayerScreen() {
             </View>
           )}
 
-          {/* Bottom info (Tubi-style) */}
-          <View style={styles.bottomOverlay}>
-            {/* Channel info */}
+          {/* Bottom overlay */}
+          <View style={styles.bottomOverlay} pointerEvents="box-none">
+            {/* Channel name + EPG */}
             <View style={styles.bottomInfo}>
-              <Text style={styles.channelName} numberOfLines={1}>{currentChannel.streamName}</Text>
+              <Text style={styles.channelNameText} numberOfLines={1}>{currentChannel.streamName}</Text>
               {epgCurrent?.title ? (
-                <Text style={styles.programName} numberOfLines={1}>{epgCurrent.title}</Text>
+                <Text style={styles.programNameText} numberOfLines={1}>{epgCurrent.title}</Text>
               ) : null}
               {currentChannel.streamType === 'live' && (
                 <View style={styles.liveBadge}>
@@ -379,7 +441,7 @@ export default function PlayerScreen() {
             )}
 
             {/* Bottom controls */}
-            <SafeAreaView edges={['bottom']} style={styles.bottomControls}>
+            <SafeAreaView edges={['bottom', 'left', 'right']} style={styles.bottomControls}>
               <TouchableOpacity testID="player-fav-btn" style={styles.bottomBtn}>
                 <Ionicons name="star-outline" size={22} color="#fff" />
               </TouchableOpacity>
@@ -387,14 +449,13 @@ export default function PlayerScreen() {
                 <Ionicons name="information-circle-outline" size={22} color="#fff" />
               </TouchableOpacity>
 
-              {/* Center: prev | pause/play | next */}
+              {/* Center: prev | play/pause | next */}
               <View style={styles.centerControls}>
                 <TouchableOpacity testID="player-prev-btn" style={styles.centerBtn} onPress={() => switchChannel('prev')}>
                   <Ionicons name="play-skip-back" size={26} color="#fff" />
                 </TouchableOpacity>
                 <TouchableOpacity testID="player-play-btn" style={styles.playBtn} onPress={() => {
-                  if (player.playing) player.pause();
-                  else player.play();
+                  if (player.playing) player.pause(); else player.play();
                 }}>
                   <Ionicons name={isPlaying ? 'pause' : 'play'} size={30} color="#000" />
                 </TouchableOpacity>
@@ -419,10 +480,11 @@ export default function PlayerScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
-  blackBg: { flex: 1, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' },
+  loadingBg: { backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' },
   centerWrap: { alignItems: 'center', gap: 12 },
   loadingText: { color: '#888', fontSize: 14 },
   errorText: { color: '#EF4444', fontSize: 14, textAlign: 'center', paddingHorizontal: 32 },
+  retryWrap: { position: 'absolute', bottom: '40%', alignSelf: 'center' },
   retryBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: '#00BFFF', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20,
@@ -431,7 +493,7 @@ const styles = StyleSheet.create({
 
   // Logo flash
   logoFlash: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)',
   },
   logoFlashImg: { width: 120, height: 80 },
@@ -449,20 +511,24 @@ const styles = StyleSheet.create({
   guideProgressBar: { height: 3, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2, marginTop: 8 },
   guideProgressFill: { height: '100%', backgroundColor: '#00BFFF', borderRadius: 2 },
 
-  // Overlay
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'space-between',
-  },
-
   // Top bar
-  topBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingTop: 4 },
+  topBar: {
+    position: 'absolute', top: 0, left: 0, right: 0,
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingTop: 4,
+    backgroundColor: 'linear-gradient(transparent, rgba(0,0,0,0.5))' as any,
+  },
   topBtn: { width: 48, height: 48, justifyContent: 'center', alignItems: 'center' },
+  aspectBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, marginRight: 8,
+  },
+  aspectLabel: { color: '#fff', fontSize: 12, fontWeight: '700' },
 
-  // Right controls (channel up/down + logo)
+  // Right controls
   rightControls: {
-    position: 'absolute', right: 16, top: '30%',
-    alignItems: 'center', gap: 8,
+    position: 'absolute', right: 16, top: 0, bottom: 0,
+    justifyContent: 'center', alignItems: 'center', gap: 8,
   },
   channelBtn: {
     width: 48, height: 48, borderRadius: 24,
@@ -473,37 +539,35 @@ const styles = StyleSheet.create({
 
   // Bottom overlay
   bottomOverlay: {
-    paddingHorizontal: 20,
-    paddingBottom: 8,
-    backgroundColor: 'transparent',
+    position: 'absolute', left: 0, right: 0, bottom: 0,
+    paddingHorizontal: 20, paddingBottom: 8,
+    backgroundColor: 'rgba(0,0,0,0.0)',
   },
   bottomInfo: { marginBottom: 8 },
-  channelName: { color: '#fff', fontSize: 20, fontWeight: '800' },
-  programName: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: '600', marginTop: 2 },
+  channelNameText: { color: '#fff', fontSize: 18, fontWeight: '800' },
+  programNameText: { color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 2 },
   liveBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#E50914', paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: 4, alignSelf: 'flex-start', marginTop: 8,
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: '#E50914', paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 4, alignSelf: 'flex-start', marginTop: 6,
   },
-  liveText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  liveText: { color: '#fff', fontSize: 11, fontWeight: '800' },
 
   // Progress
-  progressContainer: { marginBottom: 8 },
+  progressContainer: { marginBottom: 10 },
   progressBar: { height: 3, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2 },
-  progressFill: { height: '100%', backgroundColor: '#fff', borderRadius: 2 },
+  progressFill: { height: '100%', backgroundColor: '#00BFFF', borderRadius: 2 },
   progressTimes: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
   progressTime: { color: 'rgba(255,255,255,0.5)', fontSize: 11 },
 
   // Bottom controls
-  bottomControls: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingTop: 4,
-  },
+  bottomControls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   bottomBtn: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
   centerControls: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   centerBtn: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
   playBtn: {
-    width: 52, height: 52, borderRadius: 26,
-    backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center',
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: '#fff',
+    justifyContent: 'center', alignItems: 'center',
   },
 });
