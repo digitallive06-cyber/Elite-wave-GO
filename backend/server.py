@@ -184,7 +184,25 @@ async def get_full_epg(stream_id: int, username: str, password: str):
     data = await xtream_api_call(username, password, "get_simple_data_table", {"stream_id": str(stream_id)})
     return decode_epg_listings(data)
 
-# Recently added content
+# Batch EPG endpoint - fetches EPG for multiple streams sequentially to avoid rate limiting
+import asyncio
+
+@api_router.get("/epg/batch")
+async def get_batch_epg(username: str, password: str, stream_ids: str):
+    """Get EPG for multiple streams in one call. stream_ids is comma-separated."""
+    ids = [int(x.strip()) for x in stream_ids.split(",") if x.strip().isdigit()][:20]
+    results = {}
+    for sid in ids:
+        try:
+            data = await xtream_api_call(username, password, "get_short_epg", {"stream_id": str(sid)})
+            decoded = decode_epg_listings(data) if isinstance(data, dict) else data
+            results[str(sid)] = decoded
+        except Exception:
+            results[str(sid)] = {"epg_listings": []}
+        await asyncio.sleep(0.15)  # 150ms delay between requests to avoid 503
+    return results
+
+
 @api_router.get("/vod/recent")
 async def get_recent_vod(username: str, password: str, limit: int = 20):
     data = await xtream_api_call(username, password, "get_vod_streams")
