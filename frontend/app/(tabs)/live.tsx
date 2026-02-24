@@ -205,7 +205,6 @@ export default function LiveScreen() {
   // Go fullscreen - pauses inline player + passes pre-resolved URL (no restart)
   const goFullscreen = useCallback(() => {
     if (!activeChannel) return;
-    try { inlinePlayer.pause(); } catch (e) {}
     const cat = categories.find(c => c.category_id === activeChannel.category_id);
     router.push({
       pathname: '/player',
@@ -217,9 +216,10 @@ export default function LiveScreen() {
         categoryName: cat?.category_name || '',
         categoryId: selectedCategory || activeChannel.category_id || '',
         containerExtension: 'ts',
+        directUrl: streamUrl || '',  // Pass pre-resolved URL → no restart
       },
     });
-  }, [activeChannel, categories, selectedCategory, router]);
+  }, [activeChannel, categories, selectedCategory, router, streamUrl]);
 
   // Auto-fullscreen on landscape rotation
   useEffect(() => {
