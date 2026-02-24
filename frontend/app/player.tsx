@@ -210,7 +210,6 @@ export default function PlayerScreen() {
     setCurrentIndex(newIdx);
     setCurrentChannel(prev => ({ ...prev, streamId: ch.stream_id, streamName: ch.name, streamIcon: ch.stream_icon || '' }));
     flashLogo(ch.stream_icon || '');
-    showTvGuide();
     setEpgCurrent(null); setEpgNext(null); setEpgProgress(0);
   };
 
