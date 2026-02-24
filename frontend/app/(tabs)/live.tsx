@@ -135,7 +135,7 @@ export default function LiveScreen() {
         testID={`live-channel-${index}`}
         style={[styles.channelRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
         activeOpacity={0.7}
-        onPress={() => addToHistory(item)}
+        onPress={() => playChannel(item)}
       >
         <View style={[styles.channelLogo, { backgroundColor: colors.surfaceHighlight }]}>
           {item.stream_icon ? (
