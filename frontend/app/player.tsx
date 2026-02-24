@@ -253,9 +253,11 @@ export default function PlayerScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Video */}
-      {streamUrl && !loading ? (
-        <TouchableOpacity activeOpacity={1} onPress={toggleOverlay} style={StyleSheet.absoluteFill}>
+      <StatusBar hidden={true} />
+      {/* Background touch layer - ALWAYS responds to taps to toggle overlay */}
+      <TouchableOpacity activeOpacity={1} onPress={toggleOverlay} style={StyleSheet.absoluteFill}>
+        {/* Video */}
+        {streamUrl && !loading ? (
           <VideoView
             testID="video-player"
             style={StyleSheet.absoluteFill}
@@ -264,26 +266,26 @@ export default function PlayerScreen() {
             contentFit="cover"
             nativeControls={false}
           />
-        </TouchableOpacity>
-      ) : (
-        <View style={styles.blackBg}>
-          {loading ? (
-            <View style={styles.centerWrap}>
-              <ActivityIndicator size="large" color="#00BFFF" />
-              <Text style={styles.loadingText}>Loading stream...</Text>
-            </View>
-          ) : error ? (
-            <View style={styles.centerWrap}>
-              <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
-              <Text style={styles.errorText}>{error}</Text>
-              <TouchableOpacity testID="player-retry-btn" style={styles.retryBtn} onPress={() => resolveUrl(currentChannel.streamId, currentChannel.streamType, currentChannel.containerExtension)}>
-                <Ionicons name="refresh" size={20} color="#fff" />
-                <Text style={styles.retryText}>Retry</Text>
-              </TouchableOpacity>
-            </View>
-          ) : null}
-        </View>
-      )}
+        ) : (
+          <View style={styles.blackBg}>
+            {loading ? (
+              <View style={styles.centerWrap}>
+                <ActivityIndicator size="large" color="#00BFFF" />
+                <Text style={styles.loadingText}>Loading stream...</Text>
+              </View>
+            ) : error ? (
+              <View style={styles.centerWrap}>
+                <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+                <Text style={styles.errorText}>{error}</Text>
+                <TouchableOpacity testID="player-retry-btn" style={styles.retryBtn} onPress={() => resolveUrl(currentChannel.streamId, currentChannel.streamType, currentChannel.containerExtension)}>
+                  <Ionicons name="refresh" size={20} color="#fff" />
+                  <Text style={styles.retryText}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+          </View>
+        )}
+      </TouchableOpacity>
 
       {/* Channel logo flash on switch */}
       {switchingLogo !== null && (
