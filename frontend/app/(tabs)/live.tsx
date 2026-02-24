@@ -512,14 +512,32 @@ export default function LiveScreen() {
               <View style={styles.inlineLoading}>
                 <ActivityIndicator size="small" color="#00BFFF" />
               </View>
-            ) : (streamUrl && !isFullscreen) ? (
+            ) : streamUrl ? (
               <TouchableOpacity activeOpacity={0.95} onPress={goFullscreen} style={styles.inlineVideoTouch}>
                 <VideoView
+                  ref={videoViewRef}
                   testID="inline-video-player"
                   style={styles.inlineVideo}
                   player={inlinePlayer}
                   contentFit="contain"
                   nativeControls={false}
+                  allowsFullscreen
+                  onFullscreenEnter={() => {
+                    isFullscreenRef.current = true;
+                    if (Platform.OS !== 'web') {
+                      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
+                      NavigationBar.setVisibilityAsync('hidden').catch(() => {});
+                    }
+                  }}
+                  onFullscreenExit={() => {
+                    isFullscreenRef.current = false;
+                    if (Platform.OS !== 'web') {
+                      ScreenOrientation.unlockAsync()
+                        .then(() => ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP))
+                        .catch(() => {});
+                      NavigationBar.setVisibilityAsync('visible').catch(() => {});
+                    }
+                  }}
                 />
               </TouchableOpacity>
             ) : null}
