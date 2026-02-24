@@ -231,13 +231,18 @@ export default function LiveScreen() {
 
   // Auto-fullscreen on landscape rotation - stored in ref so we can cancel it
   useEffect(() => {
+    if (Platform.OS === 'web') return;
     if (!activeChannel) {
+      // No channel playing - lock portrait and remove listener
       if (orientationSubRef.current) {
         ScreenOrientation.removeOrientationChangeListener(orientationSubRef.current);
         orientationSubRef.current = null;
       }
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
       return;
     }
+    // Channel is playing - unlock orientation so rotation triggers the listener
+    ScreenOrientation.unlockAsync().catch(() => {});
     // Remove any existing listener before adding new one
     if (orientationSubRef.current) {
       ScreenOrientation.removeOrientationChangeListener(orientationSubRef.current);
