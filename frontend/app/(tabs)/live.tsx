@@ -13,6 +13,7 @@ import { api } from '../../src/utils/api';
 export default function LiveScreen() {
   const { colors } = useTheme();
   const { username, password } = useAuth();
+  const router = useRouter();
   const [categories, setCategories] = useState<any[]>([]);
   const [streams, setStreams] = useState<any[]>([]);
   const [filteredStreams, setFilteredStreams] = useState<any[]>([]);
