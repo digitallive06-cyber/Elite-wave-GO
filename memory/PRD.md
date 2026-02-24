@@ -13,83 +13,77 @@ Elite Wave is a full-stack IPTV mobile application built with Expo (React Native
 ## Features Implemented
 
 ### Video Player (expo-video)
-- Uses expo-video with useVideoPlayer and VideoView
-- Resolves stream URLs via backend (handles LB redirects)
-- Primary: .m3u8 (HLS) format for better LB compatibility
-- Fallback: .ts format when m3u8 fails
-- Back button, play/pause, LIVE badge, fullscreen, PiP support
-- EPG info panel showing current program
-- Retry with fallback URL on failure
-- Supports live, movie, and series stream types
-- **Screen Ratio Control**: Cycle through FIT/FILL/STRETCH modes via top bar button
-- **Transparent Top Bar**: Slim, semi-transparent control bar in fullscreen
-- **Channel Switch Animation**: Black screen with next channel logo on switch
-- **Favorite Star Button**: Toggle favorites directly from player
+- Fullscreen landscape player with bottom-only controls overlay
+- Transparent top bar with back button, channel name, and screen ratio control
+- Channel switching with black screen + logo flash animation
+- Screen Ratio Control: cycle FIT/FILL/STRETCH modes
+- Favorite star button in bottom controls
+- Channel up/down arrows for in-category switching
+- EPG info (current + next) in bottom overlay with progress bar
 
-### Stream URL Resolution
-- Backend resolves stream URLs following HTTP redirects for load-balanced streams
-- Generates proper Xtream Codes URL format: /live/user/pass/id.m3u8
-- Handles both main server and LB transparently
+### Multiview (NEW)
+- 2x2 grid layout in forced landscape mode
+- Pre-fills slot 0 with the current channel from player
+- Empty slots show "+" icon to add a channel
+- Tap "+" → Category picker modal → Channel picker → plays in that slot
+- Long-press any slot → opens channel picker to replace it
+- Audio routing: only the tapped/active slot produces sound (volume=1, others=0)
+- Cyan border + volume icon on active slot, mute icon on inactive slots
+- Back button returns to previous screen
+
+### Orientation Handling
+- **Home/VOD/Series/Catch-Up tabs**: Locked to portrait (via tabs `_layout.tsx`)
+- **Live TV tab**: Unlocks orientation when a channel is playing inline; rotation to landscape triggers fullscreen player
+- **Player screen**: Forced landscape with hidden status bar
+- **Multiview screen**: Forced landscape
+
+### Favorites System
+- Context-based: FavoritesContext with AsyncStorage for device-local persistence
+- Backend sync: POST /api/user/favorites (toggle add/remove), GET /api/user/favorites
+- Player integration: Star icon in bottom controls bar
+- Home screen: Dedicated "Favorites" section with horizontal channel cards
+- Live TV screen: Favorites row above channel list when favorites exist
+
+### Live TV Screen
+- Inline hero player (16:9) when channel selected
+- Favorites section at top of channel list
+- Full TV guide below player with EPG data per channel
+- Category horizontal scroll filter
+- Auto-fullscreen on landscape rotation (ScreenOrientation listener)
+
+### Home Screen
+- Hero player (last watched channel)
+- Favorites Section with star icon
+- Recently Watched Live Channels
+- Last Added Movies and Series
+
+### EPG
+- Base64 decoded titles/descriptions
+- Batch EPG endpoint with rate-limiting protection
+- Current + next program display with progress bars
 
 ### Login Screen
 - Elite Wave logo + username/password with show/hide toggle
 - Session persistence with AsyncStorage
 
-### Home Screen
-- Hero player (last watched channel with play button)
-- **Favorites Section**: Horizontal scroll of favorited channels with star icon
-- Recently Watched Live Channels
-- Last Added Movies with "See All"
-- Last Added Series with "See All"
-
 ### Tab Navigation (5 tabs)
-1. **HOME** - Hero + Favorites + Recent + New Content
-2. **LIVE** - 1831+ channels with EPG, categories, search, favorites section
-3. **VOD** - Movies with categories, posters
-4. **SERIES** - TV Series with categories
-5. **CATCH-UP** - DVR-enabled channels
-
-### EPG
-- Base64 decoded titles/descriptions
-- Current + next program on live channels
-- Batch EPG endpoint (/api/epg/batch) with rate-limiting protection (150ms delays)
-- Reliable timestamp parsing using start_timestamp/stop_timestamp (Unix epoch)
-- Progress bar showing current program progress in channel list
-
-### Player (Tubi-style)
-- Full-screen landscape mode (expo-screen-orientation locks on entry, unlocks on back)
-- Channel up/down arrows for in-category switching
-- Channel logo flash animation on channel change
-- TV guide overlay (3 seconds) on channel switch
-- EPG progress bar and current/next program display
-- Screen ratio adjustment (contain/cover/fill)
-
-### Live TV Screen
-- Inline hero player (16:9, max 240px height) when channel selected
-- **Favorites section** at top of channel list (horizontal scroll with star badges)
-- Full TV guide below player with EPG data per channel
-- Category horizontal scroll filter
-- Tap fullscreen button → navigates to player.tsx in landscape
-- Auto-fullscreen on landscape rotation (ScreenOrientation listener)
-
-### Favorites System
-- **Context-based**: FavoritesContext with AsyncStorage for device-local persistence
-- **Backend sync**: POST /api/user/favorites (toggle add/remove), GET /api/user/favorites
-- **Player integration**: Star icon in bottom controls bar
-- **Home screen**: Dedicated "Favorites" section with horizontal channel cards
-- **Live TV screen**: Favorites row above channel list when favorites exist
+1. HOME - Hero + Favorites + Recent + New Content
+2. LIVE - Channels with EPG, categories, search, favorites
+3. VOD - Movies with categories, posters
+4. SERIES - TV Series with categories
+5. CATCH-UP - DVR-enabled channels
 
 ## Changelog
 - 2025: Initial IPTV app built (login, home, live, vod, series, catchup, player)
-- 2026-02: EPG batch endpoint fixed (route ordering + timestamp parsing), landscape lock added
+- 2026-02: EPG batch endpoint fixed, landscape lock added
 - 2026-02: Player UI improvements (transparent top bar, channel switch animation, screen ratio control)
-- 2026-02: Favorites system implemented (context + AsyncStorage + backend API + UI on Home & Live screens)
-- 2026-02: Fixed missing ScreenOrientation import in live.tsx
+- 2026-02: Favorites system (context + AsyncStorage + backend API + Home & Live screens)
+- 2026-02: Removed duplicate top TV guide overlay from fullscreen player
+- 2026-02: Portrait lock for all tab screens (home, vod, series, catchup)
+- 2026-02: Fixed live screen rotation → now unlocks orientation when channel playing, triggers fullscreen on landscape
+- 2026-02: **Multiview feature** - 2x2 grid with 4 simultaneous channels, category/channel picker, audio routing
 
 ## Next Steps (P0/P1/P2)
-
-### P0 - Critical
-- (none currently)
 
 ### P1 - High Priority
 - Series episode drill-down and playback
