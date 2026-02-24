@@ -1,0 +1,210 @@
+<analysis>
+
+**original_problem_statement**: The user wants to build an IPTV mobile application from scratch for Android (APK).
+
+**PRODUCT REQUIREMENTS**:
+- **API Integration**: The app must use the Xtream Codes API, connecting to the DNS .
+- **Core Content Features**: It needs to pull and display Live Channels, VOD, TV Series, Catch-up, and EPG (Electronic Program Guide) data, including channel logos.
+- **Login**: A login screen is required with a specific logo, username field, and a password field with a visibility toggle (hidden by default).
+- **UI/Layout**:
+    - Both dark and light themes, switchable in the app settings.
+    - Main navigation with tabs: HOME, LIVE, VOD, SERIES, CATCH-UP.
+    - **Home Screen**:
+        - A hero player at the top that plays the last viewed channel's live stream.
+        - Below the player, sections for Recently Watched, Recently Added Movies, and Recently Added TV Shows.
+    - **Live TV Screen**:
+        - When a channel is clicked, it should NOT go fullscreen. Instead, it should show an inline hero preview player at the top of the screen, with the full TV guide displayed underneath it.
+        - The channel list must display whats on" and "whats next for each channel, along with a progress bar for the current program.
+        - Categories at the top should be horizontally scrollable and not get cut off.
+    - **Player Screen**:
+        - The player UI should be styled like the Tubi app.
+        - It must support streams from both the main server and load-balanced (LB) servers, handling redirects correctly.
+        - **Controls**:
+            - Channel up/down arrows to switch to the next/previous channel within the same category.
+            - When changing channels, the new channel's logo should flash briefly.
+        - **Fullscreen**: Fullscreen mode should only be activated by a button press or device rotation and should force the phone into landscape orientation.
+        - **Overlay**: An EPG overlay should appear for 3 seconds when changing channels in fullscreen.
+
+**User's preferred language**: English
+
+**what currently exists?**
+A full-stack Expo application has been built with a FastAPI backend and a React Native frontend.
+- **Backend**: A proxy server () that communicates with the Xtream Codes API. It handles user login, fetches channels/VOD/series, resolves load-balanced stream URLs, and has endpoints for recently added content.
+- **Frontend**:
+    - A functional login screen that authenticates against the Xtream API.
+    - A tab-based navigation structure (Home, Live, VOD, Series, Catch-up).
+    - A redesigned Home screen showing categorized content fetched from the API.
+    - A VOD screen that lists movies.
+    - A Tubi-style player screen () with custom controls.
+    - An initial version of the  screen with an inline player and TV guide structure has been created, but it's not fully functional.
+
+**Last working item**:
+- **Last item agent was working**: The agent identified that fetching EPG data for all visible channels on the Live TV screen was causing  errors from the Xtream API due to rate limiting. To solve this, the agent started creating a new backend endpoint, , in . This endpoint is designed to accept a list of stream IDs and fetch their EPG data in a single, rate-limit-aware batch call from the server-side, preventing the frontend from overwhelming the API.
+- **Status**: IN PROGRESS
+- **Agent Testing Done**: N
+- **Which testing method agent to use?**: backend testing agent
+- **User Testing Done**: N
+
+**All Pending/In progress Issue list**:
+- **Issue 1**: (P0) EPG data fails to load on the Live TV screen due to API rate limiting.
+- **Issue 2**: (P1) The Live TV channel list does not correctly display whats on," "whats next, and the progress bar.
+- **Issue 3**: (P2) On the web preview, the inline player on the  screen incorrectly takes up the full viewport height.
+
+**Issues Detail**:
+- **Issue 1: EPG data failing to load**
+    - **Attempted fixes**: The agent initially tried fetching EPG for each channel individually from the frontend, which resulted in 503 errors.
+    - **Next debug checklist**:
+        1.  Complete the implementation of the  endpoint in . Ensure it can handle multiple s and includes logic (e.g., a small delay between requests) to avoid being rate-limited by the Xtream server.
+        2.  Test the new endpoint using  to confirm it returns a JSON object with EPG data for multiple channels without triggering a 503 error.
+    - **Why fix this issue and what will be achieved with the fix?**: This is the most critical issue. Fixing it will enable the TV guide on the  screen to be populated with real data, which is a core user requirement.
+    - **Status**: IN PROGRESS
+    - **Is recurring issue?** Y
+    - **Should Test frontend/backend/both after fix?**: both
+    - **Blocked on other issue**: No
+
+- **Issue 2: Live TV guide UI not showing data**
+    - **Attempted fixes**: Previous attempts to render the EPG data failed because the data itself couldn't be fetched reliably (see Issue 1).
+    - **Next debug checklist**:
+        1.  In , replace the individual EPG fetching logic with a single call to the new  endpoint.
+        2.  Pass the list of visible s to the new endpoint.
+        3.  Map the returned EPG data to the channel list and render the whats on" title, "whats next title, and the  component for each channel.
+    - **Why fix this issue and what will be achieved with the fix?**: This will fulfill the user's explicit requirement for a functional TV guide in the live section.
+    - **Status**: BLOCKED
+    - **Is recurring issue?** Y
+    - **Should Test frontend/backend/both after fix?**: both
+    - **Blocked on other issue**: Issue 1: EPG data failing to load
+
+- **Issue 3: Inline player height on web**
+    - **Attempted fixes**: None. The issue was only identified.
+    - **Next debug checklist**:
+        1.  In , apply a  style to the  containing the inline player.
+        2.  Use  to apply this style conditionally, so it doesn't affect mobile.
+    - **Why fix this issue and what will be achieved with the fix?**: This is a minor UI fix to make the web preview usable for debugging the  screen.
+    - **Status**: NOT STARTED
+    - **Is recurring issue?** N
+    - **Should Test frontend/backend/both after fix?**: frontend
+    - **Blocked on other issue**: No
+
+**In progress Task List**:
+- **Task 1: Complete the  screen redesign (P0)**
+    - **Where to resume**: The file  exists with a basic structure for an inline player and a list. It needs to be connected to the new batch EPG endpoint.
+    - **What will be achieved with this?**: A functional Live TV screen with an inline player at the top and a complete, data-driven TV guide underneath, as per the user's latest request.
+    - **Status**: IN PROGRESS
+    - **Should Test frontend/backend/both after fix?**: both
+    - **Blocked on something**: Blocked on completing the  endpoint (Issue 1).
+
+**Upcoming and Future Tasks**
+- **Upcoming Tasks**:
+    - (P1) **Player Fullscreen Logic**: Implement logic in  to handle device rotation and a fullscreen button, forcing the view into landscape mode when activated.
+    - (P2) **Live Hero Player**: Ensure the hero section in  correctly plays the live stream of the last watched channel, not just displays a static image.
+    - (P3) **Player Channel Switching**: Implement the up/down arrow functionality in  to switch to the previous/next channel within the current category.
+    - (P4) **Player UI Enhancements**:
+        - Add the TV guide overlay that appears for 3 seconds on channel change.
+        - Add the flashing channel logo effect on channel change.
+- **Future Tasks**:
+    - **VOD/Series/Catch-up functionality**: Flesh out these sections beyond just listing items. Implement search, filtering, and details pages.
+    - **Settings Screen**: Implement the theme (light/dark) switching functionality.
+    - **Favorites**: Implement the favorite functionality in the player. This may require adding user data storage to the backend (e.g., in MongoDB).
+
+**Completed work in this session**
+- **Recently completed**:
+  - Backend proxy for Xtream Codes API created and refined. (DONE)
+  - Login authentication flow implemented. (DONE)
+  - Home screen redesigned to show categorized content (Recently Watched, Added Movies, etc.). (DONE)
+  - Backend endpoint to resolve load-balanced stream URLs created. (DONE)
+  - A Tubi-style player screen UI was created in . (DONE)
+  - Navigation from Home, Live, and VOD screens to the player screen was implemented. (DONE)
+  - Horizontal scrolling for categories on the live screen was fixed. (DONE)
+  - A new  screen with an inline player layout was initiated. (IN PROGRESS)
+
+**Earlier issues found/mentioned but not fixed**
+All major issues mentioned by the user have been captured in the  or .
+
+**Known issue recurrence from previous fork**
+- **Issue**: EPG data not loading correctly.
+- **Recurrence count**: 3
+- **Status**: IN PROGRESS
+- **Note**: The root cause has been identified as API rate limiting. The current fix-in-progress (batch backend endpoint) is a new strategy to resolve this permanently.
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+- **Backend**: FastAPI, Python,  library for proxying.
+- **Frontend**: React Native, Expo (SDK 50+), Expo Router for file-based routing.
+- **State Management**: React Context API for Auth and Theme.
+- **Video Playback**:  and .
+- **Styling**:  for all styles.
+- **API**: Xtream Codes API (REST-based).
+
+**key DB schema**
+- **table_name**: No database tables have been implemented yet. The initial plan mentioned MongoDB for user history, but this has not been created. All data is currently ephemeral or proxied from the Xtream API.
+
+**changes in tech stack**
+-  was added for video playback UI controls.
+
+**All files of reference**
+- : The core of the backend, containing all API proxy logic. Currently being edited to add the  endpoint.
+- : The main screen currently under development. Needs to be fixed to display EPG data correctly using the new batch endpoint.
+- : The Tubi-style player screen. Will need updates for fullscreen and channel switching logic.
+- : The home screen. Will need verification for the live hero player feature.
+- : Will need a new function to call the  endpoint.
+
+**Areas that need refactoring**:
+- The file creation process was initially chaotic. A review of the  directory might reveal unused or redundant components.
+
+**key api endpoints**
+- : Authenticates user.
+- : Generic proxy for most Xtream API actions (get live streams, VOD, etc.).
+- : Gets recently added VOD content.
+- : Gets recently added series.
+- : Resolves the final URL for load-balanced streams.
+- : (In Progress) Fetches EPG data for multiple channels in a single call.
+
+**Critical Info for New Agent**
+- **API Rate Limiting**: The Xtream server at  is extremely sensitive to rapid, parallel requests and will respond with a  error. Your immediate priority is to finish the  batch endpoint () to fetch EPG data responsibly. Do not attempt to fetch EPG from the frontend with parallel calls.
+- **User Frustration**: The user has expressed frustration with the agent pausing. Please proceed with the tasks efficiently and avoid unnecessary pauses or requests for human input until a significant block of work is complete.
+- **Player Logic**: The user has very specific requirements for the player behavior (inline vs. fullscreen, rotation, channel switching). Pay close attention to these details when implementing player features.
+
+**documents created in this job**
+- 
+
+**Last 10 User Messages and any pending HUMAN messages**
+1.  **user**: Asks the agent to stop pausing as it's wasting their tokens. (PENDING - agent needs to resume work)
+2.  **user**: Asks the agent to proceed. (PENDING - agent needs to resume work)
+3.  **user**: Asks if the agent is still paused. (PENDING - agent needs to resume work)
+4.  **user**: Provides detailed feedback on the Live TV and player screens. (IN PROGRESS - agent is working on these fixes)
+    - Clicking a channel should open an inline player with a TV guide below it, not fullscreen.
+    - Fullscreen should be optional (on rotation/button click) and force landscape.
+    - The channel list is still not showing EPG data (whats on/next") and the progress bar.
+5.  **agent**: Identifies 503 rate limiting as the root cause of the EPG issue and starts building a backend batch endpoint.
+6.  **agent**: Rebuilds `live.tsx` to use the new inline player + guide structure.
+7.  **agent**: Fixes deprecation warnings for `allowsFullscreen` and `textShadow`.
+8.  **user**: Provides very detailed feedback on the player UI and home screen. (Completed)
+    - Wants a "Tubi-style" player with specific controls (prev/next channel in category).
+    - Hero player on the home screen should play video live.
+    - Live TV list needs "whats on/next + progress bar.
+    - Category list was getting cut off.
+9.  **agent**: Implements the Tubi-style player UI and fixes the category scroll issue.
+10. **user**: Reports that streams are not playing and need to handle load-balanced servers. (Completed)
+
+**Project Health Check:**
+- **Broken**: The core EPG functionality for the Live TV guide is broken due to API rate limiting.
+- **Mocked**: No mocked components; the app relies on live API data.
+
+**3rd Party Integrations**
+- Xtream Codes API via direct HTTP requests to .
+
+**Testing status**
+- **Testing agent used after significant changes**: YES
+- **Troubleshoot agent used after agent stuck in loop**: NO
+- **Test files created**: None.
+- **Known regressions**: The EPG display on the live screen has been a recurring issue that has not yet been successfully implemented.
+
+**Credentials to test flow:**
+The agent has been successfully using credentials provided by the user in previous logs. The next agent should be able to extract these from the history if needed for  testing. They are not hardcoded.
+
+**What agent forgot to execute**
+The agent paused in the middle of writing the  endpoint in  after being prompted multiple times by the user to continue working. The immediate next action should be to complete that piece of code.
+
+</analysis>
