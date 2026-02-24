@@ -23,7 +23,9 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <RootLayoutInner />
+        <FavoritesProvider>
+          <RootLayoutInner />
+        </FavoritesProvider>
       </AuthProvider>
     </ThemeProvider>
   );
