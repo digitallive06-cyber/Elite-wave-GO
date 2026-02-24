@@ -3,10 +3,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as ScreenOrientation from 'expo-screen-orientation';
+import { useEffect } from 'react';
 
 export default function TabsLayout() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+
+  // Lock all tab screens to portrait by default
+  useEffect(() => {
+    if (Platform.OS !== 'web') {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+    }
+  }, []);
 
   // Ensure bottom tab bar sits above the phone's navigation bar
   const bottomPadding = Math.max(insets.bottom, Platform.OS === 'android' ? 8 : 0);
