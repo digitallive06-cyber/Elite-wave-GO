@@ -233,6 +233,15 @@ export default function LiveScreen() {
 
   const { isPlaying } = useEvent(inlinePlayer, 'playingChange', { isPlaying: inlinePlayer.playing });
 
+  // Pause inline player when screen loses focus (going to fullscreen → no double audio)
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        try { inlinePlayer.pause(); } catch (e) {}
+      };
+    }, [inlinePlayer])
+  );
+
   // Filtered programs for TV guide
   const filteredPrograms = useMemo(() => {
     if (!channelFullEpg.length) return [];
