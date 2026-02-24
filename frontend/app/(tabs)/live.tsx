@@ -193,9 +193,19 @@ export default function LiveScreen() {
     loadFullEpg(item.stream_id);
   };
 
-  // Go fullscreen - pauses inline player + passes pre-resolved URL (no restart)
+  // Guard refs to prevent double navigation
+  const navigatingRef = useRef(false);
+  const orientationSubRef = useRef<any>(null);
+
+  // Go fullscreen - passes pre-resolved URL + guards against double-fire
   const goFullscreen = useCallback(() => {
-    if (!activeChannel) return;
+    if (!activeChannel || navigatingRef.current) return;
+    navigatingRef.current = true;
+    // Remove orientation listener IMMEDIATELY so player.tsx's lockAsync doesn't re-trigger it
+    if (orientationSubRef.current) {
+      ScreenOrientation.removeOrientationChangeListener(orientationSubRef.current);
+      orientationSubRef.current = null;
+    }
     const cat = categories.find(c => c.category_id === activeChannel.category_id);
     router.push({
       pathname: '/player',
@@ -207,14 +217,24 @@ export default function LiveScreen() {
         categoryName: cat?.category_name || '',
         categoryId: selectedCategory || activeChannel.category_id || '',
         containerExtension: 'ts',
-        directUrl: streamUrl || '',  // Pass pre-resolved URL → no restart
+        directUrl: streamUrl || '',
       },
     });
   }, [activeChannel, categories, selectedCategory, router, streamUrl]);
 
-  // Auto-fullscreen on landscape rotation
+  // Auto-fullscreen on landscape rotation - stored in ref so we can cancel it
   useEffect(() => {
-    if (!activeChannel) return;
+    if (!activeChannel) {
+      if (orientationSubRef.current) {
+        ScreenOrientation.removeOrientationChangeListener(orientationSubRef.current);
+        orientationSubRef.current = null;
+      }
+      return;
+    }
+    // Remove any existing listener before adding new one
+    if (orientationSubRef.current) {
+      ScreenOrientation.removeOrientationChangeListener(orientationSubRef.current);
+    }
     const sub = ScreenOrientation.addOrientationChangeListener(({ orientationInfo }) => {
       if (
         orientationInfo.orientation === ScreenOrientation.Orientation.LANDSCAPE_LEFT ||
@@ -223,7 +243,11 @@ export default function LiveScreen() {
         goFullscreen();
       }
     });
-    return () => ScreenOrientation.removeOrientationChangeListener(sub);
+    orientationSubRef.current = sub;
+    return () => {
+      ScreenOrientation.removeOrientationChangeListener(sub);
+      orientationSubRef.current = null;
+    };
   }, [activeChannel, goFullscreen]);
 
   // Video player for inline preview
