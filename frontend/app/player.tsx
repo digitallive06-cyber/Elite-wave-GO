@@ -48,14 +48,11 @@ export default function PlayerScreen() {
   const [channelList, setChannelList] = useState<any[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showOverlay, setShowOverlay] = useState(true);
-  const [showGuide, setShowGuide] = useState(false);
   const [switchingLogo, setSwitchingLogo] = useState<string | null>(null);
 
   const overlayOpacity = useRef(new Animated.Value(1)).current;
-  const guideOpacity = useRef(new Animated.Value(0)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const overlayTimer = useRef<NodeJS.Timeout | null>(null);
-  const guideTimer = useRef<NodeJS.Timeout | null>(null);
   const isFirstMount = useRef(true);
 
   const [currentChannel, setCurrentChannel] = useState({
