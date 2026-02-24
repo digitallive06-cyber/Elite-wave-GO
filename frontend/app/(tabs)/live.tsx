@@ -368,26 +368,25 @@ export default function LiveScreen() {
 
   const { isPlaying } = useEvent(inlinePlayer, 'playingChange', { isPlaying: inlinePlayer.playing });
 
-  // Pause inline player when screen loses focus + reset navigation guard on focus gain
+  // Pause inline player when screen loses focus; resume on focus gain
   useFocusEffect(
     useCallback(() => {
-      navigatingRef.current = false; // Reset guard when returning from player
-      // Re-lock portrait if no active channel, unlock if channel is playing
-      if (Platform.OS !== 'web') {
-        if (activeChannel) {
-          ScreenOrientation.unlockAsync().catch(() => {});
-        } else {
-          ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
-        }
+      // Returning to live screen - resume player if channel active
+      if (activeChannel && streamUrl) {
+        try { inlinePlayer.play(); } catch {}
+      }
+      // Ensure portrait lock if not in fullscreen
+      if (Platform.OS !== 'web' && !isFullscreenRef.current) {
+        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
       }
       return () => {
-        try { inlinePlayer.pause(); } catch (e) {}
-        // Lock portrait when leaving live tab
+        // Leaving live screen - pause player and lock portrait
+        try { inlinePlayer.pause(); } catch {}
         if (Platform.OS !== 'web') {
           ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
         }
       };
-    }, [inlinePlayer, activeChannel])
+    }, [inlinePlayer, activeChannel, streamUrl])
   );
 
   // Filtered programs for TV guide
