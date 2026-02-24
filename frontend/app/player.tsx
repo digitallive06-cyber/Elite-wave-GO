@@ -60,14 +60,16 @@ export default function PlayerScreen() {
     containerExtension: params.containerExtension || 'ts',
   });
 
-  // Lock to landscape on mount, unlock on unmount
+  // Lock to landscape on mount, hide system bars, unlock on unmount
   useEffect(() => {
     if (Platform.OS !== 'web') {
       ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
+      NavigationBar.setVisibilityAsync('hidden').catch(() => {});
     }
     return () => {
       if (Platform.OS !== 'web') {
         ScreenOrientation.unlockAsync().catch(() => {});
+        NavigationBar.setVisibilityAsync('visible').catch(() => {});
       }
     };
   }, []);
