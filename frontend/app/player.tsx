@@ -191,15 +191,6 @@ export default function PlayerScreen() {
     showOverlay ? hideOverlayNow() : showOverlayNow();
   }, [showOverlay, showOverlayNow, hideOverlayNow]);
 
-  const showTvGuide = () => {
-    setShowGuide(true); guideOpacity.setValue(0);
-    Animated.timing(guideOpacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
-    if (guideTimer.current) clearTimeout(guideTimer.current);
-    guideTimer.current = setTimeout(() => {
-      Animated.timing(guideOpacity, { toValue: 0, duration: 500, useNativeDriver: true }).start(() => setShowGuide(false));
-    }, 3000);
-  };
-
   const flashLogo = (icon: string) => {
     setSwitchingLogo(icon);
     Animated.sequence([
