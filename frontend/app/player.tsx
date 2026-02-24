@@ -387,15 +387,6 @@ const styles = StyleSheet.create({
   logoFlashImg: { width: 160, height: 100 },
 
   // Guide overlay
-  guideOverlay: { position: 'absolute', top: 48, left: 16, right: 16, backgroundColor: 'rgba(0,0,0,0.75)', borderRadius: 10, padding: 12 },
-  guideContent: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  guideIcon: { width: 44, height: 44, borderRadius: 6 },
-  guideTextWrap: { flex: 1 },
-  guideChannelName: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  guideProgramName: { color: 'rgba(255,255,255,0.55)', fontSize: 12, marginTop: 2 },
-  guideProgressBar: { height: 2, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 1, marginTop: 6 },
-  guideProgressFill: { height: '100%', backgroundColor: '#00BFFF', borderRadius: 1 },
-
   // Top bar - slim + transparent
   topBar: {
     position: 'absolute', top: 0, left: 0, right: 0,
