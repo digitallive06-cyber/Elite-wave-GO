@@ -367,6 +367,7 @@ export default function PlayerScreen() {
               </View>
               <TouchableOpacity style={styles.bottomBtn}><Ionicons name="share-outline" size={22} color="#fff" /></TouchableOpacity>
               <TouchableOpacity testID="player-multiview-btn" style={styles.bottomBtn} onPress={() => {
+                try { player.pause(); } catch {}
                 if (Platform.OS !== 'web') {
                   ScreenOrientation.unlockAsync().catch(() => {});
                   NavigationBar.setVisibilityAsync('visible').catch(() => {});
