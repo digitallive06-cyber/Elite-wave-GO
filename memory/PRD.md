@@ -1,55 +1,58 @@
 # Elite Wave IPTV App - Product Requirements Document
 
 ## Overview
-Elite Wave is a full-stack IPTV mobile application built with Expo (React Native) and FastAPI. It connects to Xtream Codes API servers to provide live TV, VOD, TV Series, Catch-Up, and EPG content.
+Elite Wave is a full-stack IPTV mobile application built with Expo (React Native) and FastAPI. It connects to Xtream Codes API servers to provide live TV, VOD, TV Series, Catch-Up, and EPG content with video playback.
 
 ## Architecture
-- **Frontend**: Expo (React Native) with expo-router file-based navigation
-- **Backend**: FastAPI (Python) acting as a proxy to Xtream Codes API
+- **Frontend**: Expo (React Native) with expo-router, expo-video for playback
+- **Backend**: FastAPI (Python) proxy to Xtream Codes API + stream URL resolver
 - **Database**: MongoDB for user history and favorites
 - **IPTV Server**: Xtream Codes API at `https://elitewavenetwork.xyz:443`
 
 ## Features Implemented
 
-### Login Screen
-- Elite Wave logo prominently displayed
-- Username input field
-- Password input with show/hide toggle (hidden by default)
-- Form validation (empty fields check)
-- Error handling for invalid credentials (401 responses)
-- Session persistence with AsyncStorage (localStorage fallback on web)
+### Video Player (expo-video)
+- Uses expo-video with useVideoPlayer and VideoView
+- Resolves stream URLs via backend (handles LB redirects)
+- Primary: .m3u8 (HLS) format for better LB compatibility
+- Fallback: .ts format when m3u8 fails
+- Back button, play/pause, LIVE badge, fullscreen, PiP support
+- EPG info panel showing current program
+- Retry with fallback URL on failure
+- Supports live, movie, and series stream types
 
-### Home Screen (Redesigned)
-- Hero player area showing last watched channel with play button
-- Recently Watched Live Channels - horizontal scroll of channel cards with logos
-- Last Added Movies with "See All >" button - horizontal scroll of movie posters
-- Last Added Series with "See All >" button - horizontal scroll of series posters
+### Stream URL Resolution
+- Backend resolves stream URLs following HTTP redirects for load-balanced streams
+- Generates proper Xtream Codes URL format: /live/user/pass/id.m3u8
+- Handles both main server and LB transparently
+
+### Login Screen
+- Elite Wave logo + username/password with show/hide toggle
+- Session persistence with AsyncStorage
+
+### Home Screen
+- Hero player (last watched channel with play button)
+- Recently Watched Live Channels
+- Last Added Movies with "See All"
+- Last Added Series with "See All"
 
 ### Tab Navigation (5 tabs)
-1. **HOME** - Hero player + Recently Watched + Last Added Movies + Last Added Series
-2. **LIVE** - 1831+ channels with categories, search, decoded EPG (current + next)
-3. **VOD** - Movies with categories, search, poster grid
-4. **SERIES** - TV Series with categories, search, series grid
-5. **CATCH-UP** - DVR/catch-up enabled channels
+1. **HOME** - Hero + Recent + New Content
+2. **LIVE** - 1831+ channels with EPG, categories, search → plays in player
+3. **VOD** - Movies with categories, posters → plays in player
+4. **SERIES** - TV Series with categories
+5. **CATCH-UP** - DVR-enabled channels
 
-### EPG (Electronic Program Guide)
-- Base64 decoded titles and descriptions from Xtream Codes API
-- Shows current program with green indicator on Live TV channels
-- Shows next upcoming program in italics
-- Time ranges displayed
+### EPG
+- Base64 decoded titles/descriptions
+- Current + next program on live channels
 
 ### Settings
-- Dark/Light theme toggle with persistence
-- Account information display
-- Logout functionality
-
-### Bottom Tab Bar
-- Uses SafeAreaInsets to avoid phone nav bar overlap
-- Adaptive bottom padding based on device
-- Edge-to-edge Android support with transparent navigation bar
+- Dark/Light theme toggle
+- Account info, logout
 
 ## Next Steps
-- Video playback integration (streaming)
-- EPG timeline view with full schedule
-- Picture-in-Picture mode
-- Series season/episode drill-down UI
+- Series episode drill-down and playback
+- Full EPG timeline view
+- Channel favorites on player screen
+- Catch-up playback integration
