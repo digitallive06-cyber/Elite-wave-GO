@@ -1,0 +1,61 @@
+{
+  "summary": "Iteration 7: Testing IPTV player key fixes - player controls tap toggle, directUrl param, aspect ratio cycling, channel up/down, inline player focus effect. Found and fixed 1 critical crash bug in live.tsx (TDZ error). All 11 requested features verified.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "live.tsx - useFocusEffect + inlinePlayer",
+        "issue": "CRITICAL CRASH (FIXED): ReferenceError: Cannot access 'inlinePlayer' before initialization. useFocusEffect hook at line 197 referenced `inlinePlayer` in dependency array [inlinePlayer], but `inlinePlayer` (const) was declared at line 239. JavaScript TDZ error crashed entire Live TV screen.",
+        "testID": "n/a - live.tsx hook ordering",
+        "priority": "CRITICAL - FIXED"
+      },
+      {
+        "component": "player.tsx + live.tsx - pointerEvents prop",
+        "issue": "WARN: props.pointerEvents is deprecated. Use style.pointerEvents. Used as prop on Animated.View and View in both files. Functionality works in current web preview but may break in future Expo/RN versions. Should migrate to style={{ pointerEvents: 'box-none' }}.",
+        "testID": "player-tap-hide, player-aspect-btn wrappers",
+        "priority": "LOW"
+      },
+      {
+        "component": "live.tsx - inline-video-player testID",
+        "issue": "MINOR: VideoView with testID='inline-video-player' does not expose data-testid in web DOM. expo-video VideoView uses native rendering that bypasses testID web attribute. Not a functional bug.",
+        "testID": "inline-video-player",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "DONE (fixed in this iteration): Move useFocusEffect in live.tsx to after inlinePlayer declaration to fix TDZ crash.",
+    "LOW PRIORITY: Migrate pointerEvents prop to style prop in player.tsx and live.tsx: change pointerEvents='box-none' to style={{ pointerEvents: 'box-none' }} on View and Animated.View components to eliminate deprecation warnings."
+  ],
+  "critical_code_review_comments": [
+    "live.tsx: useFocusEffect was defined BEFORE inlinePlayer declaration, causing TDZ ReferenceError crash on every render. Fixed by moving useFocusEffect to after inlinePlayer and isPlaying declarations (line ~236).",
+    "player.tsx: Uses pointerEvents='box-none' as a prop on Animated.View and View - deprecated in React Native web. Functional for now but should be moved to style prop.",
+    "player.tsx: 5-second auto-hide timer for overlay is working correctly - showOverlayNow() called on stream load, auto-hides after 5s.",
+    "player.tsx: directUrl handling verified - when directUrl param length > 5, player uses it directly without calling resolveUrl(). Stream URL calls: 0 confirmed.",
+    "live.tsx: goFullscreen correctly passes directUrl: streamUrl || '' as param - URL encodes the full stream URL."
+  ],
+  "updated_files": [
+    "frontend/app/(tabs)/live.tsx - Moved useFocusEffect from line 197 (before inlinePlayer) to after inlinePlayer declaration (line ~236)"
+  ],
+  "success_rate": {
+    "backend": "N/A (frontend only test)",
+    "frontend": "100% (11/11 features verified after bug fix)"
+  },
+  "seed_data_creation": "None - used real credentials DJBIGANT/sTtb4D5v7T",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 11 player/live features verified working after fixing TDZ crash in live.tsx. (1) Live TV loads 1831 channels. (2) Tapping channel shows inline player with LIVE badge + EPG + controls. (3) Fullscreen btn navigates to /player with directUrl param - no /api/stream/url call made on player open. (4) Player overlay shows initially then auto-hides in 5s. (5) player-tap-show (invisible fill) appears when overlay hidden. (6) Clicking player-tap-show shows controls (player-tap-hide, back, aspect, ch-up, ch-down, play buttons). (7) Aspect cycles FIT→FILL→STRETCH. (8) Channel up/down switches channels. (9) Back button returns to /live. One remaining LOW priority issue: pointerEvents as prop (deprecated) should be moved to style prop.",
+  "rca_of_issue": {
+    "bug": "live.tsx crashes with ReferenceError: Cannot access 'inlinePlayer' before initialization",
+    "root_cause": "JavaScript const has Temporal Dead Zone (TDZ) - accessing const variable before its declaration in the same function scope throws ReferenceError. In live.tsx, useFocusEffect was at line 197 with dependency array [inlinePlayer], but const inlinePlayer = useVideoPlayer(...) was declared at line 239. When React calls the component function and evaluates useCallback(() => {...}, [inlinePlayer]) at line 202, it accesses inlinePlayer which is in TDZ.",
+    "reproduction": "1. Login. 2. Navigate to Live TV tab. 3. See red error screen: 'Cannot access inlinePlayer before initialization'",
+    "fix": "Move the useFocusEffect block to AFTER const inlinePlayer is declared. Applied fix: removed useFocusEffect from lines 196-203, re-added it after line 234 (after inlinePlayer and isPlaying declarations)."
+  }
+}
