@@ -563,6 +563,15 @@ export default function LiveScreen() {
     );
   }
 
+  // Compute favorite data for current channel
+  const favData = activeChannel ? {
+    stream_id: activeChannel.stream_id,
+    name: activeChannel.name,
+    stream_icon: activeChannel.stream_icon || '',
+    category_id: activeChannel.category_id || '',
+  } : null;
+  const starred = activeChannel ? isFavorite(activeChannel.stream_id) : false;
+
   // ==================== RENDER ====================
   return (
     <View style={{ flex: 1 }}>
