@@ -245,7 +245,6 @@ export default function PlayerScreen() {
             testID="video-player"
             style={StyleSheet.absoluteFill}
             player={player}
-            allowsFullscreen
             allowsPictureInPicture
             contentFit="cover"
             nativeControls={false}
