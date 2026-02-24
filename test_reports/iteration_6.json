@@ -1,0 +1,50 @@
+{
+  "summary": "Iteration 6: Full testing of TV Guide mode (new feature). Backend: 12/12 tests passed including /api/epg/full/{stream_id} new endpoint. Frontend: All TV Guide features working - inline hero player, channel selector, date picker, program schedule, close/fullscreen buttons, player back button.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "player.tsx - formatTime(epgCurrent.end)",
+        "issue": "'Invalid Date' displayed for EPG end time in player progress bar. Root cause: Xtream API returns `end` field as Unix timestamp string (e.g. '1771956000') while `start` is a formatted datetime ('2026-02-24 12:30:00'). formatTime() calls new Date('1771956000') which returns Invalid Date. Fix: change formatTime(epgCurrent.end) to formatTime(epgCurrent.stop) since the `stop` field contains the properly formatted datetime.",
+        "testID": "n/a - player.tsx line 376",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration6_tvguide.py",
+    "/app/test_reports/pytest/pytest_iteration6.xml"
+  ],
+  "action_items": [
+    "Fix Invalid Date in player.tsx line 376: change `formatTime(epgCurrent.end)` to `formatTime(epgCurrent.stop)`. The Xtream API `end` field is a Unix timestamp string, not a datetime. The `stop` field has the properly formatted datetime."
+  ],
+  "critical_code_review_comments": [
+    "player.tsx line 376: formatTime(epgCurrent.end) causes 'Invalid Date' - Xtream API `end` field is Unix timestamp string, `stop` field is the formatted datetime. Both represent end time but only `stop` is parseable by new Date().",
+    "live.tsx TV Guide mode: renderGuideHeader FlatList channel selector thumbnails have no testIDs but are functionally correct",
+    "api.ts getFullEpg uses /api/epg/full/{stream_id} endpoint - verified backend returns epg_listings array with start_timestamp",
+    "live.tsx filteredPrograms correctly filters by date using start_timestamp and getDateStr - VERIFIED",
+    "player.tsx formatTime(epgCurrent.start) works correctly since start='2026-02-24 12:30:00' but formatTime(epgCurrent.end) fails since end='1771956000' (Unix timestamp)"
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "100% (12/12 tests passed)",
+    "frontend": "90% (9/10 features verified, 1 display bug found)"
+  },
+  "seed_data_creation": "None - used real credentials DJBIGANT/sTtb4D5v7T",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All TV Guide features verified working: (1) Login screen OK, (2) Live TV tab shows 1831 channels with category filters, (3) Tapping channel activates inline hero player at top showing channel name + EPG + LIVE badge, (4) Channel selector row (horizontal thumbnails) appears, (5) Date picker (Yesterday/Today/future dates) appears and correctly labeled, (6) TV Schedule section shows program listing with times and descriptions, (7) Close button (X) dismisses player and returns to channel list, (8) Fullscreen button navigates to /player?streamId=... route, (9) Player back button returns to /live. Bug: player.tsx line 376 shows 'Invalid Date' for end time - use epgCurrent.stop instead of epgCurrent.end.",
+  "rca_of_issue": {
+    "bug": "Invalid Date displayed in player screen EPG progress bar end time",
+    "file": "frontend/app/player.tsx line 376",
+    "root_cause": "Xtream API EPG listings return two end-time fields: `end` (Unix timestamp string like '1771956000') and `stop` (formatted datetime like '2026-02-24 13:00:00'). The formatTime() function calls new Date(dateStr) which cannot parse a bare numeric string as a Unix epoch. The `start` field happens to be a formatted datetime string which parses correctly, but `end` is a Unix timestamp.",
+    "reproduction": "1. Login. 2. Navigate to Live TV. 3. Tap a channel. 4. Click fullscreen. 5. Observe EPG progress bar times - start shows correctly (e.g. '12:30 PM') but end shows 'Invalid Date'",
+    "fix": "In player.tsx line 376, change formatTime(epgCurrent.end) to formatTime(epgCurrent.stop). Both `stop` and `end` represent the program end time but `stop` is the human-readable datetime string while `end` is a Unix timestamp."
+  }
+}
