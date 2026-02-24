@@ -1018,4 +1018,54 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   liveBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800' },
+
+  // ==================== FULLSCREEN STYLES ====================
+  fsContainer: { flex: 1, backgroundColor: '#000' },
+  fsTopBar: {
+    position: 'absolute', top: 0, left: 0, right: 0,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 8, paddingVertical: 6,
+    backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 10,
+  },
+  fsTopBtn: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  fsChannelName: { flex: 1, color: '#fff', fontSize: 14, fontWeight: '700', marginHorizontal: 8 },
+  fsAspectBtn: {
+    backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 12, paddingVertical: 4,
+    borderRadius: 6,
+  },
+  fsAspectText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+
+  fsSideControls: {
+    position: 'absolute', right: 12, top: '30%', gap: 24, zIndex: 10,
+  },
+  fsSideBtn: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+
+  fsBottomOverlay: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8,
+  },
+  fsInfoSection: { marginBottom: 8 },
+  fsInfoChannel: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  fsInfoProgram: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 2 },
+  fsLiveRow: { flexDirection: 'row', marginTop: 4, gap: 8, alignItems: 'center' },
+  fsLiveBadge: { backgroundColor: '#E50914', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 3 },
+  fsLiveText: { color: '#fff', fontSize: 10, fontWeight: '800' },
+  fsProgressBar: { height: 3, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 2, marginTop: 6 },
+  fsProgressFill: { height: '100%', backgroundColor: '#00BFFF', borderRadius: 2 },
+
+  fsControlsRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  },
+  fsCtrlBtn: { padding: 8 },
+  fsCenterControls: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  fsCenterBtn: { padding: 6 },
+  fsPlayBtn: {
+    width: 48, height: 48, borderRadius: 24,
+    backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center',
+  },
 });
