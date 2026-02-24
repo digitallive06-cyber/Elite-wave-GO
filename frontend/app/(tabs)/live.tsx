@@ -272,6 +272,8 @@ export default function LiveScreen() {
   // Pause inline player when screen loses focus; resume on focus gain
   useFocusEffect(
     useCallback(() => {
+      navigatingRef.current = false; // Reset navigation guard
+      // Resume player when returning from fullscreen/multiview
       if (activeChannel && streamUrl) {
         try { inlinePlayer.play(); } catch {}
       }
