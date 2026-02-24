@@ -373,7 +373,7 @@ export default function PlayerScreen() {
                 </View>
                 <View style={styles.progressTimes}>
                   <Text style={styles.progressTime}>{formatTime(epgCurrent.start)}</Text>
-                  <Text style={styles.progressTime}>{formatTime(epgCurrent.end)}</Text>
+                  <Text style={styles.progressTime}>{formatTime(epgCurrent.stop || epgCurrent.end)}</Text>
                 </View>
               </View>
             )}
