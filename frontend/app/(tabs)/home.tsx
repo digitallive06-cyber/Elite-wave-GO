@@ -314,8 +314,8 @@ const styles = StyleSheet.create({
   },
   liveDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#fff' },
   liveText: { color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 1 },
-  heroChannelName: { color: '#fff', fontSize: 18, fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
-  heroCategoryName: { color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 2, textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
+  heroChannelName: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  heroCategoryName: { color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 2 },
   heroEmptyText: { color: '#555', fontSize: 13, textAlign: 'center' },
   heroPlayBtn: {
     position: 'absolute', right: 16, bottom: 16,
