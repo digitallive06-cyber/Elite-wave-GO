@@ -317,21 +317,32 @@ export default function LiveScreen() {
     // Remove any existing listener before adding new one
     if (orientationSubRef.current) {
       ScreenOrientation.removeOrientationChangeListener(orientationSubRef.current);
-    }
-    // CRITICAL: Unlock orientation so listener can fire when device rotates
-    ScreenOrientation.unlockAsync().catch(() => {});
-    const sub = ScreenOrientation.addOrientationChangeListener(({ orientationInfo }) => {
-      const o = orientationInfo.orientation;
-      if (o === ScreenOrientation.Orientation.LANDSCAPE_LEFT || o === ScreenOrientation.Orientation.LANDSCAPE_RIGHT) {
-        if (!isFullscreenRef.current) enterFullscreen();
-      } else if (o === ScreenOrientation.Orientation.PORTRAIT_UP || o === ScreenOrientation.Orientation.PORTRAIT_DOWN) {
-        if (isFullscreenRef.current) exitFullscreen();
-      }
-    });
-    orientationSubRef.current = sub;
-    return () => {
-      ScreenOrientation.removeOrientationChangeListener(sub);
       orientationSubRef.current = null;
+    }
+    // CRITICAL: Must await unlock before registering listener
+    let cancelled = false;
+    const setup = async () => {
+      try {
+        await ScreenOrientation.unlockAsync();
+      } catch {}
+      if (cancelled) return;
+      const sub = ScreenOrientation.addOrientationChangeListener(({ orientationInfo }) => {
+        const o = orientationInfo.orientation;
+        if (o === ScreenOrientation.Orientation.LANDSCAPE_LEFT || o === ScreenOrientation.Orientation.LANDSCAPE_RIGHT) {
+          if (!isFullscreenRef.current) enterFullscreen();
+        } else if (o === ScreenOrientation.Orientation.PORTRAIT_UP || o === ScreenOrientation.Orientation.PORTRAIT_DOWN) {
+          if (isFullscreenRef.current) exitFullscreen();
+        }
+      });
+      orientationSubRef.current = sub;
+    };
+    setup();
+    return () => {
+      cancelled = true;
+      if (orientationSubRef.current) {
+        ScreenOrientation.removeOrientationChangeListener(orientationSubRef.current);
+        orientationSubRef.current = null;
+      }
     };
   }, [activeChannel, enterFullscreen, exitFullscreen]);
 
