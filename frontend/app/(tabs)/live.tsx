@@ -50,10 +50,6 @@ export default function LiveScreen() {
   const [playerEpg, setPlayerEpg] = useState<{ current: any; next: any } | null>(null);
   const [playerProgress, setPlayerProgress] = useState(0);
 
-  // Fullscreen state - uses native VideoView.enterFullscreen()
-  const videoViewRef = useRef<any>(null);
-  const isFullscreenRef = useRef(false);
-
   // Full TV guide state
   const [channelFullEpg, setChannelFullEpg] = useState<any[]>([]);
   const [epgLoading, setEpgLoading] = useState(false);
