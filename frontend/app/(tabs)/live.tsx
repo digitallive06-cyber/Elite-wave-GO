@@ -226,14 +226,14 @@ export default function LiveScreen() {
     setShowFsControls(true);
     fsControlsOpacity.setValue(1);
     if (Platform.OS !== 'web') {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
+      // MUST unlock first (tabs layout locks PORTRAIT), then lock LANDSCAPE
+      ScreenOrientation.unlockAsync()
+        .then(() => ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE))
+        .catch(() => {});
       NavigationBar.setVisibilityAsync('hidden').catch(() => {});
     }
-    // Hide tab bar
-    try { navigation.getParent()?.setOptions({ tabBarStyle: { display: 'none' } }); } catch {}
-    // Start controls auto-hide
     startFsControlsTimer();
-  }, [activeChannel, navigation]);
+  }, [activeChannel]);
 
   // Exit fullscreen - return to inline preview with the SAME player
   const exitFullscreen = useCallback(() => {
@@ -244,20 +244,8 @@ export default function LiveScreen() {
       ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
       NavigationBar.setVisibilityAsync('visible').catch(() => {});
     }
-    // Show tab bar
-    try {
-      navigation.getParent()?.setOptions({
-        tabBarStyle: {
-          backgroundColor: colors.tabBar,
-          borderTopColor: colors.border,
-          borderTopWidth: 1,
-          height: 68, paddingTop: 8, paddingBottom: 8,
-          elevation: 20,
-        },
-      });
-    } catch {}
     if (fsControlsTimer.current) clearTimeout(fsControlsTimer.current);
-  }, [navigation, colors]);
+  }, []);
 
   // Fullscreen controls auto-hide timer
   const startFsControlsTimer = useCallback(() => {
