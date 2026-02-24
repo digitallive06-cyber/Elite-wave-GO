@@ -16,6 +16,7 @@ const CARD_WIDTH = (width - 48 - 12) / 3;
 export default function VodScreen() {
   const { colors } = useTheme();
   const { username, password } = useAuth();
+  const router = useRouter();
   const [categories, setCategories] = useState<any[]>([]);
   const [streams, setStreams] = useState<any[]>([]);
   const [filteredStreams, setFilteredStreams] = useState<any[]>([]);
