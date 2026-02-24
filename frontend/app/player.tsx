@@ -65,13 +65,10 @@ export default function PlayerScreen() {
     containerExtension: params.containerExtension || 'ts',
   });
 
-  // System bars + orientation
+  // System bars + orientation: ALWAYS force landscape
   useEffect(() => {
     if (Platform.OS !== 'web') {
-      // Only lock to landscape if opened in portrait (button press) - not when already landscape
-      if (!openedInLandscape.current) {
-        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
-      }
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
       NavigationBar.setVisibilityAsync('hidden').catch(() => {});
     }
     return () => {
@@ -82,9 +79,9 @@ export default function PlayerScreen() {
     };
   }, []);
 
-  // Exit fullscreen when rotated back to portrait (only if opened in landscape = natural rotation)
+  // Exit fullscreen when rotated back to portrait
   useEffect(() => {
-    if (!openedInLandscape.current || Platform.OS === 'web') return;
+    if (Platform.OS === 'web') return;
     if (wh > ww && !hasExited.current) {
       hasExited.current = true;
       if (Platform.OS !== 'web') {
