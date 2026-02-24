@@ -88,6 +88,13 @@ export const api = {
     return res.json();
   },
 
+  getBatchEpg: async (username: string, password: string, streamIds: number[]) => {
+    const ids = streamIds.join(',');
+    const res = await fetch(`${BACKEND_URL}/api/epg/batch?username=${username}&password=${password}&stream_ids=${ids}`);
+    if (!res.ok) return {};
+    return res.json();
+  },
+
   getEpg: async (username: string, password: string, streamId: number) => {
     const res = await fetch(`${BACKEND_URL}/api/epg/${streamId}?username=${username}&password=${password}`);
     if (!res.ok) throw new Error('Failed to load EPG');
