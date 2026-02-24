@@ -110,21 +110,19 @@ export default function PlayerScreen() {
       const data = await api.getEpg(username, password, streamId);
       if (data?.epg_listings?.length > 0) {
         const now = Math.floor(Date.now() / 1000);
+        const getTs = (e: any, field: 'start' | 'end') => {
+          if (field === 'start') return parseInt(e.start_timestamp) || Math.floor(new Date(e.start + ' UTC').getTime() / 1000);
+          return parseInt(e.stop_timestamp) || Math.floor(new Date(e.end + ' UTC').getTime() / 1000);
+        };
         const current = data.epg_listings.find((e: any) => {
-          const start = new Date(e.start).getTime() / 1000;
-          const end = new Date(e.end).getTime() / 1000;
-          return now >= start && now <= end;
+          return now >= getTs(e, 'start') && now <= getTs(e, 'end');
         });
-        const next = data.epg_listings.find((e: any) => {
-          const start = new Date(e.start).getTime() / 1000;
-          return start > now;
-        });
+        const next = data.epg_listings.find((e: any) => getTs(e, 'start') > now);
         setEpgCurrent(current || null);
         setEpgNext(next || null);
-        // Calculate progress
         if (current) {
-          const start = new Date(current.start).getTime() / 1000;
-          const end = new Date(current.end).getTime() / 1000;
+          const start = getTs(current, 'start');
+          const end = getTs(current, 'end');
           const prog = (now - start) / (end - start);
           setEpgProgress(Math.min(Math.max(prog, 0), 1));
         }
