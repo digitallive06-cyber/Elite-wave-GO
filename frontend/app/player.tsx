@@ -319,7 +319,10 @@ export default function PlayerScreen() {
         <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
           {/* Top bar */}
           <SafeAreaView edges={['top']} style={styles.topBar}>
-            <TouchableOpacity testID="player-back-btn" onPress={() => router.back()} style={styles.topBtn}>
+            <TouchableOpacity testID="player-back-btn" onPress={() => {
+              if (Platform.OS !== 'web') ScreenOrientation.unlockAsync().catch(() => {});
+              router.back();
+            }} style={styles.topBtn}>
               <Ionicons name="chevron-back" size={28} color="#fff" />
             </TouchableOpacity>
             <View style={{ flex: 1 }} />
