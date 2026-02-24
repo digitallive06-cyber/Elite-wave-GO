@@ -245,8 +245,8 @@ class TestStaticCodeVerification:
         assert "volume" in content.lower(), "Missing volume-based audio routing"
         assert "isActive" in content, "Missing active slot tracking"
         
-        # Check for add channel buttons
-        assert 'testID="multiview-add-' in content, "Missing add channel buttons"
+        # Check for add channel buttons (uses template literal)
+        assert 'testID={`multiview-add-' in content, "Missing add channel buttons"
         
         print("✓ multiview.tsx: 2x2 grid with category picker and audio routing")
     
