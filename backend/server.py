@@ -63,14 +63,18 @@ async def xtream_api_call(username: str, password: str, action: str, extra_param
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client_http:
             response = await client_http.get(url, params=params)
             response.raise_for_status()
-            return response.json()
+            content_type = response.headers.get("content-type", "")
+            if "text/html" in content_type or response.text.strip().startswith("<"):
+                return []
+            data = response.json()
+            return data if data else []
     except httpx.TimeoutException:
         raise HTTPException(status_code=504, detail="Xtream server timeout")
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=e.response.status_code, detail="Xtream API error")
     except Exception as e:
         logger.error(f"Xtream API error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return []
 
 # Auth
 @api_router.post("/auth/login")
