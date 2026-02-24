@@ -1,9 +1,16 @@
 import pytest
 import requests
 import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load frontend .env to get EXPO_PUBLIC_BACKEND_URL
+frontend_env = Path(__file__).parent.parent.parent / 'frontend' / '.env'
+if frontend_env.exists():
+    load_dotenv(frontend_env)
 
 # Test backend health and auth endpoints
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL')
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://iptv-elite-stream.preview.emergentagent.com')
 
 class TestHealthEndpoint:
     """Health check endpoint tests"""
