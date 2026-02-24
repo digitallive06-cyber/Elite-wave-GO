@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface UserInfo {
@@ -48,6 +49,37 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
+async function safeGetItem(key: string): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(key);
+  } catch {
+    if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+      return localStorage.getItem(key);
+    }
+    return null;
+  }
+}
+
+async function safeSetItem(key: string, value: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(key, value);
+  } catch {
+    if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+      localStorage.setItem(key, value);
+    }
+  }
+}
+
+async function safeRemoveItem(key: string): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(key);
+  } catch {
+    if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+      localStorage.removeItem(key);
+    }
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -62,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadSavedSession = async () => {
     try {
-      const saved = await AsyncStorage.getItem('auth_session');
+      const saved = await safeGetItem('auth_session');
       if (saved) {
         const data = JSON.parse(saved);
         setUsername(data.username);
@@ -84,7 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUserInfo(data.user_info);
     setServerInfo(data.server_info);
     setIsLoggedIn(true);
-    await AsyncStorage.setItem('auth_session', JSON.stringify({
+    await safeSetItem('auth_session', JSON.stringify({
       username: user,
       password: pass,
       userInfo: data.user_info,
@@ -98,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setPassword('');
     setUserInfo(null);
     setServerInfo(null);
-    await AsyncStorage.removeItem('auth_session');
+    await safeRemoveItem('auth_session');
   };
 
   return (
