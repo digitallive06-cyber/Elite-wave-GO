@@ -105,6 +105,22 @@ export default function LiveScreen() {
     } catch (e) { console.error(e); }
   };
 
+  const playChannel = (item: any) => {
+    const cat = categories.find(c => c.category_id === item.category_id);
+    router.push({
+      pathname: '/player',
+      params: {
+        streamId: String(item.stream_id),
+        streamName: item.name,
+        streamIcon: item.stream_icon || '',
+        streamType: 'live',
+        categoryName: cat?.category_name || '',
+        containerExtension: 'ts',
+      },
+    });
+    addToHistory(item);
+  };
+
   const formatEpgTime = (dateStr: string) => {
     try {
       const d = new Date(dateStr);
