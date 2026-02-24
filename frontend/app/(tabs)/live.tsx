@@ -13,6 +13,7 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { api } from '../../src/utils/api';
 
 const { width: SCREEN_W } = Dimensions.get('window');
+const PLAYER_HEIGHT = Platform.OS === 'web' ? 240 : Math.min(SCREEN_W * 9 / 16, 240);
 
 export default function LiveScreen() {
   const { colors } = useTheme();
