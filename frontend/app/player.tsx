@@ -137,8 +137,8 @@ export default function PlayerScreen() {
     if (!epgCurrent) return;
     const interval = setInterval(() => {
       const now = Math.floor(Date.now() / 1000);
-      const start = new Date(epgCurrent.start).getTime() / 1000;
-      const end = new Date(epgCurrent.end).getTime() / 1000;
+      const start = parseInt(epgCurrent.start_timestamp) || Math.floor(new Date(epgCurrent.start + ' UTC').getTime() / 1000);
+      const end = parseInt(epgCurrent.stop_timestamp) || Math.floor(new Date(epgCurrent.end + ' UTC').getTime() / 1000);
       setEpgProgress(Math.min(Math.max((now - start) / (end - start), 0), 1));
     }, 10000);
     return () => clearInterval(interval);
