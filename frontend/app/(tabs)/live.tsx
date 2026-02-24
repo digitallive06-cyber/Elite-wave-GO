@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, Image,
   TextInput, ActivityIndicator, RefreshControl, Platform, Animated, BackHandler,
-  useWindowDimensions,
+  useWindowDimensions, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect, useNavigation } from 'expo-router';
