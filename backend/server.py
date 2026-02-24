@@ -151,14 +151,54 @@ async def get_catchup_streams(username: str, password: str, category_id: Optiona
         return [s for s in data if s.get("tv_archive") == 1]
     return data
 
-# EPG
+# EPG - decode base64 titles
+import base64
+
+def decode_epg_listings(data):
+    """Decode base64 encoded EPG titles and descriptions"""
+    if isinstance(data, dict):
+        listings = data.get("epg_listings", [])
+        for item in listings:
+            if item.get("title"):
+                try:
+                    item["title"] = base64.b64decode(item["title"]).decode("utf-8", errors="replace")
+                except Exception:
+                    pass
+            if item.get("description"):
+                try:
+                    item["description"] = base64.b64decode(item["description"]).decode("utf-8", errors="replace")
+                except Exception:
+                    pass
+        return data
+    return data
+
 @api_router.get("/epg/{stream_id}")
 async def get_epg(stream_id: int, username: str, password: str):
-    return await xtream_api_call(username, password, "get_short_epg", {"stream_id": str(stream_id)})
+    data = await xtream_api_call(username, password, "get_short_epg", {"stream_id": str(stream_id)})
+    return decode_epg_listings(data)
 
 @api_router.get("/epg/full/{stream_id}")
 async def get_full_epg(stream_id: int, username: str, password: str):
-    return await xtream_api_call(username, password, "get_simple_data_table", {"stream_id": str(stream_id)})
+    data = await xtream_api_call(username, password, "get_simple_data_table", {"stream_id": str(stream_id)})
+    return decode_epg_listings(data)
+
+# Recently added content
+@api_router.get("/vod/recent")
+async def get_recent_vod(username: str, password: str, limit: int = 20):
+    data = await xtream_api_call(username, password, "get_vod_streams")
+    if isinstance(data, list) and len(data) > 0:
+        # Sort by 'added' field descending (most recent first)
+        sorted_data = sorted(data, key=lambda x: x.get("added", "0"), reverse=True)
+        return sorted_data[:limit]
+    return []
+
+@api_router.get("/series/recent")
+async def get_recent_series(username: str, password: str, limit: int = 20):
+    data = await xtream_api_call(username, password, "get_series")
+    if isinstance(data, list) and len(data) > 0:
+        sorted_data = sorted(data, key=lambda x: x.get("last_modified", "0"), reverse=True)
+        return sorted_data[:limit]
+    return []
 
 # User History
 @api_router.post("/user/history")
