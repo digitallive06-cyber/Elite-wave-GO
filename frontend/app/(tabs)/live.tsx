@@ -232,7 +232,7 @@ export default function LiveScreen() {
         },
       });
     }, 100);
-  }, [activeChannel, streamUrl, selectedCategory, router, exitFullscreen, inlinePlayer]);
+  }, [activeChannel, streamUrl, selectedCategory, router, inlinePlayer]);
 
   // Auto-fullscreen on landscape rotation (bidirectional)
   useEffect(() => {
