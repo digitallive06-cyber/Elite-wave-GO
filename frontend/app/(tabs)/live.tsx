@@ -64,8 +64,6 @@ export default function LiveScreen() {
   const fsControlsOpacity = useRef(new Animated.Value(1)).current;
   const fsControlsTimer = useRef<NodeJS.Timeout | null>(null);
   const isFullscreenRef = useRef(false);
-  const [playerEpg, setPlayerEpg] = useState<{ current: any; next: any } | null>(null);
-  const [playerProgress, setPlayerProgress] = useState(0);
 
   // Full TV guide state
   const [channelFullEpg, setChannelFullEpg] = useState<any[]>([]);
