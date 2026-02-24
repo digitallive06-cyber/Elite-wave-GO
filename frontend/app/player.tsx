@@ -366,7 +366,24 @@ export default function PlayerScreen() {
                 </TouchableOpacity>
               </View>
               <TouchableOpacity style={styles.bottomBtn}><Ionicons name="share-outline" size={22} color="#fff" /></TouchableOpacity>
-              <TouchableOpacity style={styles.bottomBtn}><Ionicons name="grid-outline" size={22} color="#fff" /></TouchableOpacity>
+              <TouchableOpacity testID="player-multiview-btn" style={styles.bottomBtn} onPress={() => {
+                if (Platform.OS !== 'web') {
+                  ScreenOrientation.unlockAsync().catch(() => {});
+                  NavigationBar.setVisibilityAsync('visible').catch(() => {});
+                }
+                router.push({
+                  pathname: '/multiview',
+                  params: {
+                    streamId: String(currentChannel.streamId),
+                    streamName: currentChannel.streamName,
+                    streamIcon: currentChannel.streamIcon,
+                    categoryId: currentChannel.categoryId,
+                    directUrl: streamUrl || '',
+                  },
+                });
+              }}>
+                <Ionicons name="grid-outline" size={22} color="#fff" />
+              </TouchableOpacity>
             </SafeAreaView>
           </View>
         </Animated.View>
