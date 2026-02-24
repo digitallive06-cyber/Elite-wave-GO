@@ -48,6 +48,20 @@ export default function HomeScreen() {
 
   const lastWatched = history.length > 0 ? history[0] : null;
 
+  const playStream = (item: any, type: string = 'live') => {
+    router.push({
+      pathname: '/player',
+      params: {
+        streamId: String(item.stream_id),
+        streamName: item.stream_name || item.name || 'Unknown',
+        streamIcon: item.stream_icon || item.cover || '',
+        streamType: type,
+        categoryName: item.category_name || '',
+        containerExtension: item.container_extension || 'ts',
+      },
+    });
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
