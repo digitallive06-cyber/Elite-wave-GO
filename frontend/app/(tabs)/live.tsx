@@ -63,22 +63,26 @@ export default function LiveScreen() {
       const batchData = await api.getBatchEpg(username, password, ids);
       const epgMap: { [key: number]: any } = {};
       const now = Math.floor(Date.now() / 1000);
+      const getTs = (e: any, field: 'start' | 'end') => {
+        if (field === 'start') return parseInt(e.start_timestamp) || Math.floor(new Date(e.start + ' UTC').getTime() / 1000);
+        return parseInt(e.stop_timestamp) || Math.floor(new Date(e.end + ' UTC').getTime() / 1000);
+      };
       for (const [sid, data] of Object.entries(batchData) as any) {
         const listings = data?.epg_listings || [];
         if (listings.length > 0) {
           const current = listings.find((e: any) => {
-            const start = new Date(e.start).getTime() / 1000;
-            const end = new Date(e.end).getTime() / 1000;
+            const start = getTs(e, 'start');
+            const end = getTs(e, 'end');
             return now >= start && now <= end;
           });
           const next = listings.find((e: any) => {
-            const start = new Date(e.start).getTime() / 1000;
+            const start = getTs(e, 'start');
             return start > now;
           });
           let progress = 0;
           if (current) {
-            const start = new Date(current.start).getTime() / 1000;
-            const end = new Date(current.end).getTime() / 1000;
+            const start = getTs(current, 'start');
+            const end = getTs(current, 'end');
             progress = Math.min(Math.max((now - start) / (end - start), 0), 1);
           }
           epgMap[parseInt(sid)] = { current, next, progress };
