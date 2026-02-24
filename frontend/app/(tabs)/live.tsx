@@ -257,9 +257,10 @@ export default function LiveScreen() {
 
   const { isPlaying } = useEvent(inlinePlayer, 'playingChange', { isPlaying: inlinePlayer.playing });
 
-  // Pause inline player when screen loses focus (going to fullscreen → no double audio)
+  // Pause inline player when screen loses focus + reset navigation guard on focus gain
   useFocusEffect(
     useCallback(() => {
+      navigatingRef.current = false; // Reset guard when returning from player
       return () => {
         try { inlinePlayer.pause(); } catch (e) {}
       };
