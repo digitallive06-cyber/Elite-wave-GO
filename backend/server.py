@@ -80,7 +80,12 @@ async def login(req: LoginRequest):
     try:
         async with httpx.AsyncClient(timeout=30.0, verify=False) as client_http:
             response = await client_http.get(url, params=params)
+            content_type = response.headers.get("content-type", "")
+            if "text/html" in content_type or response.text.strip().startswith("<"):
+                raise HTTPException(status_code=401, detail="Invalid credentials")
             data = response.json()
+            if not data or not isinstance(data, dict):
+                raise HTTPException(status_code=401, detail="Invalid credentials")
             if data.get("user_info", {}).get("auth") == 1:
                 return data
             raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -88,7 +93,7 @@ async def login(req: LoginRequest):
         raise
     except Exception as e:
         logger.error(f"Login error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=401, detail="Invalid username or password")
 
 # Live
 @api_router.get("/live/categories")
