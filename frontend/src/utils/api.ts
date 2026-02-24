@@ -76,6 +76,18 @@ export const api = {
     return res.json();
   },
 
+  getRecentVod: async (username: string, password: string, limit: number = 20) => {
+    const res = await fetch(`${BACKEND_URL}/api/vod/recent?username=${username}&password=${password}&limit=${limit}`);
+    if (!res.ok) throw new Error('Failed to load recent movies');
+    return res.json();
+  },
+
+  getRecentSeries: async (username: string, password: string, limit: number = 20) => {
+    const res = await fetch(`${BACKEND_URL}/api/series/recent?username=${username}&password=${password}&limit=${limit}`);
+    if (!res.ok) throw new Error('Failed to load recent series');
+    return res.json();
+  },
+
   getEpg: async (username: string, password: string, streamId: number) => {
     const res = await fetch(`${BACKEND_URL}/api/epg/${streamId}?username=${username}&password=${password}`);
     if (!res.ok) throw new Error('Failed to load EPG');
