@@ -18,6 +18,7 @@ const MOVIE_CARD_WIDTH = (width - 48 - 24) / 2.5;
 export default function HomeScreen() {
   const { colors } = useTheme();
   const { username, password } = useAuth();
+  const { favorites } = useFavorites();
   const router = useRouter();
   const [history, setHistory] = useState<any[]>([]);
   const [recentMovies, setRecentMovies] = useState<any[]>([]);
