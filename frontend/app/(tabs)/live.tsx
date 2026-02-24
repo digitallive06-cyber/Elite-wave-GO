@@ -402,7 +402,7 @@ export default function LiveScreen() {
   );
 }
 
-const PLAYER_HEIGHT = SCREEN_W * 9 / 16;
+const PLAYER_HEIGHT = Math.min(SCREEN_W * 9 / 16, 240);
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
