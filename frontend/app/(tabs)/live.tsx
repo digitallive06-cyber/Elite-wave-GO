@@ -15,9 +15,6 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { useFavorites } from '../../src/contexts/FavoritesContext';
 import { api } from '../../src/utils/api';
 
-const ASPECT_MODES = ['contain', 'cover', 'fill'] as const;
-type ContentFit = typeof ASPECT_MODES[number];
-
 const getDateStr = (date: Date) => {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
