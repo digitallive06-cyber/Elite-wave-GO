@@ -28,6 +28,7 @@ export default function LiveScreen() {
   const { username, password } = useAuth();
   const { favorites, isFavorite, toggleFavorite } = useFavorites();
   const router = useRouter();
+  const navigation = useNavigation();
   const { width: windowW, height: windowH } = useWindowDimensions();
   const PLAYER_HEIGHT = Platform.OS === 'web' ? 240 : Math.min(windowW * 9 / 16, 240);
 
