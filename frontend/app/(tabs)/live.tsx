@@ -211,19 +211,23 @@ export default function LiveScreen() {
   const goFullscreen = useCallback(() => {
     if (!activeChannel) return;
     setIsFullscreen(true);
+    // Hide tab bar
+    navigation.getParent()?.setOptions({ tabBarStyle: { display: 'none' } });
     if (Platform.OS !== 'web') {
       ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
       NavigationBar.setVisibilityAsync('hidden').catch(() => {});
     }
-  }, [activeChannel]);
+  }, [activeChannel, navigation]);
 
   const exitFullscreen = useCallback(() => {
     setIsFullscreen(false);
+    // Show tab bar again
+    navigation.getParent()?.setOptions({ tabBarStyle: undefined });
     if (Platform.OS !== 'web') {
       ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
       NavigationBar.setVisibilityAsync('visible').catch(() => {});
     }
-  }, []);
+  }, [navigation]);
 
   // Navigate to multiview
   const openMultiview = useCallback(() => {
