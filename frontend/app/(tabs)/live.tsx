@@ -846,4 +846,87 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   liveBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800' },
+
+  // Video container styles - CRITICAL for fullscreen toggle
+  previewContainer: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    maxHeight: 240,
+    backgroundColor: '#000',
+    position: 'relative',
+  },
+  fullscreenContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+    backgroundColor: '#000',
+    zIndex: 9999,
+  },
+  video: {
+    width: '100%',
+    height: '100%',
+  },
+
+  // Fullscreen overlay controls
+  fsOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'space-between',
+    zIndex: 10,
+  },
+  fsTopBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: Platform.OS === 'ios' ? 50 : 16,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingBottom: 12,
+  },
+  fsTopBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fsChannelName: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+    marginLeft: 12,
+  },
+  fsBottomBar: {
+    paddingHorizontal: 16,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingTop: 12,
+  },
+  fsProgramName: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  fsControlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 24,
+  },
+  fsCtrlBtn: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
