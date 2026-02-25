@@ -1,0 +1,306 @@
+"""
+Iteration 12 Tests - Fullscreen Player Verification (Updated for expo-av implementation)
+Testing the fullscreen mode implementation in live.tsx using expo-av Video component
+
+Key features to verify:
+1. Backend APIs: /api/health, /api/live/categories, /api/live/streams, /api/stream/url
+2. Single Video component toggles between inline preview and fullscreen via style changes
+3. Fullscreen controls: back button, screen ratio toggle (FIT/FILL/STRETCH)
+4. Orientation handling: landscape → fullscreen, portrait → exit fullscreen
+5. Tab bar hides in fullscreen, shows when exiting
+6. BackHandler for Android back button in fullscreen
+"""
+import pytest
+import requests
+import os
+
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://multiview-iptv.preview.emergentagent.com')
+
+# Test credentials
+TEST_USERNAME = "DJBIGANT"
+TEST_PASSWORD = "sTtb4D5v7T"
+
+
+class TestBackendAPIs:
+    """Verify all backend API endpoints are working"""
+    
+    def test_health_endpoint(self):
+        """GET /api/health - returns status ok"""
+        response = requests.get(f"{BASE_URL}/api/health")
+        assert response.status_code == 200
+        data = response.json()
+        assert data.get("status") == "ok"
+        assert "xtream_dns" in data
+        print(f"✓ Health check passed: {data}")
+    
+    def test_live_categories(self):
+        """GET /api/live/categories - returns categories array"""
+        response = requests.get(
+            f"{BASE_URL}/api/live/categories",
+            params={"username": TEST_USERNAME, "password": TEST_PASSWORD}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) > 0
+        assert "category_id" in data[0]
+        assert "category_name" in data[0]
+        print(f"✓ Live categories: {len(data)} categories found")
+    
+    def test_live_streams(self):
+        """GET /api/live/streams - returns streams array"""
+        response = requests.get(
+            f"{BASE_URL}/api/live/streams",
+            params={"username": TEST_USERNAME, "password": TEST_PASSWORD}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) > 0
+        assert "stream_id" in data[0]
+        assert "name" in data[0]
+        print(f"✓ Live streams: {len(data)} streams found")
+    
+    def test_stream_url_resolution(self):
+        """GET /api/stream/url - returns resolved URL"""
+        response = requests.get(
+            f"{BASE_URL}/api/stream/url",
+            params={
+                "username": TEST_USERNAME, 
+                "password": TEST_PASSWORD,
+                "stream_id": 400,
+                "stream_type": "live",
+                "container_extension": "ts"
+            }
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "url" in data
+        assert "fallback_url" in data
+        assert data["url"].startswith("http")
+        print(f"✓ Stream URL resolved: {data['url'][:60]}...")
+    
+    def test_live_streams_with_category_filter(self):
+        """GET /api/live/streams with category_id filter"""
+        response = requests.get(
+            f"{BASE_URL}/api/live/streams",
+            params={"username": TEST_USERNAME, "password": TEST_PASSWORD, "category_id": "1"}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        print(f"✓ Filtered streams: {len(data)} streams in category 1")
+
+
+class TestLiveTsxFullscreenImplementation:
+    """
+    Verify the fullscreen implementation in live.tsx using expo-av Video component.
+    The implementation uses a single Video component that toggles between inline and fullscreen
+    via container style changes (previewContainer vs fullscreenContainer).
+    """
+    
+    def test_live_tsx_has_fullscreen_state(self):
+        """live.tsx should have isFullscreen state"""
+        with open("/app/frontend/app/(tabs)/live.tsx", "r") as f:
+            content = f.read()
+        
+        # Check for isFullscreen state
+        assert "const [isFullscreen, setIsFullscreen] = useState" in content, "Missing isFullscreen state"
+        print("✓ live.tsx: isFullscreen state exists")
+    
+    def test_live_tsx_has_go_fullscreen_function(self):
+        """live.tsx should have goFullscreen callback"""
+        with open("/app/frontend/app/(tabs)/live.tsx", "r") as f:
+            content = f.read()
+        
+        # Check for goFullscreen function
+        assert "const goFullscreen = useCallback" in content, "Missing goFullscreen function"
+        
+        # Check that goFullscreen sets isFullscreen to true
+        assert "setIsFullscreen(true)" in content, "goFullscreen should set isFullscreen to true"
+        print("✓ live.tsx: goFullscreen callback exists and sets isFullscreen(true)")
+    
+    def test_live_tsx_has_exit_fullscreen_function(self):
+        """live.tsx should have exitFullscreen callback"""
+        with open("/app/frontend/app/(tabs)/live.tsx", "r") as f:
+            content = f.read()
+        
+        # Check for exitFullscreen function
+        assert "const exitFullscreen = useCallback" in content, "Missing exitFullscreen function"
+        
+        # Check that exitFullscreen sets isFullscreen to false
+        assert "setIsFullscreen(false)" in content, "exitFullscreen should set isFullscreen to false"
+        print("✓ live.tsx: exitFullscreen callback exists and sets isFullscreen(false)")
+    
+    def test_live_tsx_uses_expo_av_video(self):
+        """live.tsx should use expo-av Video component"""
+        with open("/app/frontend/app/(tabs)/live.tsx", "r") as f:
+            content = f.read()
+        
+        # Check for expo-av import
+        assert "from 'expo-av'" in content, "Missing expo-av import"
+        assert "Video" in content, "Missing Video component import"
+        
+        # Check for Video component usage
+        assert "<Video" in content, "Missing Video component usage"
+        print("✓ live.tsx: Uses expo-av Video component")
+    
+    def test_live_tsx_has_video_testid(self):
+        """live.tsx should have testID on Video component"""
+        with open("/app/frontend/app/(tabs)/live.tsx", "r") as f:
+            content = f.read()
+        
+        # Check for video testID
+        assert 'testID="live-video-player"' in content, "Missing live-video-player testID"
+        print("✓ live.tsx: Video component has testID='live-video-player'")
+    
+    def test_live_tsx_has_container_styles(self):
+        """live.tsx should have previewContainer and fullscreenContainer styles"""
+        with open("/app/frontend/app/(tabs)/live.tsx", "r") as f:
+            content = f.read()
+        
+        # Check for container styles
+        assert "previewContainer" in content, "Missing previewContainer style"
+        assert "fullscreenContainer" in content, "Missing fullscreenContainer style"
+        
+        # Check that video container toggles based on isFullscreen
+        assert "isFullscreen ? " in content, "Missing isFullscreen conditional for container"
+        print("✓ live.tsx: Has previewContainer and fullscreenContainer styles with toggle")
+    
+    def test_live_tsx_has_fullscreen_back_button(self):
+        """live.tsx should have back button in fullscreen overlay"""
+        with open("/app/frontend/app/(tabs)/live.tsx", "r") as f:
+            content = f.read()
+        
+        # Check for back button testID
+        assert 'testID="fs-back-btn"' in content, "Missing fs-back-btn testID"
+        
+        # Check that back button calls exitFullscreen
+        assert "onPress={exitFullscreen}" in content, "Back button should call exitFullscreen"
+        print("✓ live.tsx: Fullscreen back button exists with exitFullscreen handler")
+    
+    def test_live_tsx_has_screen_ratio_control(self):
+        """live.tsx should have screen ratio toggle (FIT/FILL/STRETCH)"""
+        with open("/app/frontend/app/(tabs)/live.tsx", "r") as f:
+            content = f.read()
+        
+        # Check for ratio button testID
+        assert 'testID="fs-ratio-btn"' in content, "Missing fs-ratio-btn testID"
+        
+        # Check for resize modes
+        assert "ResizeMode.CONTAIN" in content, "Missing CONTAIN resize mode"
+        assert "ResizeMode.COVER" in content, "Missing COVER resize mode"
+        assert "ResizeMode.STRETCH" in content, "Missing STRETCH resize mode"
+        
+        # Check for resize mode labels
+        assert "'FIT'" in content, "Missing FIT label"
+        assert "'FILL'" in content, "Missing FILL label"
+        assert "'STRETCH'" in content, "Missing STRETCH label"
+        
+        # Check for cycleResizeMode function
+        assert "cycleResizeMode" in content, "Missing cycleResizeMode function"
+        print("✓ live.tsx: Screen ratio control exists with FIT/FILL/STRETCH modes")
+    
+    def test_live_tsx_hides_tab_bar_in_fullscreen(self):
+        """live.tsx should hide tab bar when entering fullscreen"""
+        with open("/app/frontend/app/(tabs)/live.tsx", "r") as f:
+            content = f.read()
+        
+        # Check for navigation hook
+        assert "useNavigation" in content, "Missing useNavigation import"
+        
+        # Check for tab bar hiding
+        assert "tabBarStyle: { display: 'none' }" in content, "Missing tab bar hide logic"
+        
+        # Check for tab bar showing (undefined resets to default)
+        assert "tabBarStyle: undefined" in content, "Missing tab bar show logic"
+        print("✓ live.tsx: Tab bar hides in fullscreen and shows when exiting")
+    
+    def test_live_tsx_orientation_listener(self):
+        """live.tsx should have orientation listener for landscape/portrait"""
+        with open("/app/frontend/app/(tabs)/live.tsx", "r") as f:
+            content = f.read()
+        
+        # Check for ScreenOrientation import
+        assert "ScreenOrientation" in content, "Missing ScreenOrientation import"
+        
+        # Check for orientation listener
+        assert "addOrientationChangeListener" in content, "Missing orientation change listener"
+        
+        # Check for landscape detection
+        assert "LANDSCAPE_LEFT" in content, "Missing LANDSCAPE_LEFT handling"
+        assert "LANDSCAPE_RIGHT" in content, "Missing LANDSCAPE_RIGHT handling"
+        
+        # Check that landscape triggers fullscreen
+        assert "setIsFullscreen(true)" in content, "Landscape should trigger fullscreen"
+        
+        # Check that portrait exits fullscreen
+        assert "setIsFullscreen(false)" in content, "Portrait should exit fullscreen"
+        print("✓ live.tsx: Orientation listener handles landscape→fullscreen, portrait→exit")
+    
+    def test_live_tsx_backhandler(self):
+        """live.tsx should have Android BackHandler for fullscreen exit"""
+        with open("/app/frontend/app/(tabs)/live.tsx", "r") as f:
+            content = f.read()
+        
+        # Check for BackHandler import
+        assert "BackHandler" in content, "Missing BackHandler import"
+        
+        # Check for hardwareBackPress listener
+        assert "hardwareBackPress" in content, "Missing hardwareBackPress handler"
+        
+        # Check that it calls exitFullscreen
+        assert "exitFullscreen()" in content, "BackHandler should call exitFullscreen"
+        
+        # Check that it returns true to prevent app exit
+        assert "return true" in content, "BackHandler should return true in fullscreen"
+        print("✓ live.tsx: BackHandler for Android back button in fullscreen")
+    
+    def test_live_tsx_inline_fullscreen_button(self):
+        """live.tsx should have fullscreen button in inline player controls"""
+        with open("/app/frontend/app/(tabs)/live.tsx", "r") as f:
+            content = f.read()
+        
+        # Check for inline fullscreen button testID
+        assert 'testID="inline-fullscreen-btn"' in content, "Missing inline-fullscreen-btn testID"
+        
+        # Check that it calls goFullscreen
+        assert "onPress={goFullscreen}" in content, "Inline fullscreen button should call goFullscreen"
+        print("✓ live.tsx: Inline fullscreen button exists with goFullscreen handler")
+    
+    def test_live_tsx_fullscreen_overlay_controls(self):
+        """live.tsx should have fullscreen overlay with controls"""
+        with open("/app/frontend/app/(tabs)/live.tsx", "r") as f:
+            content = f.read()
+        
+        # Check for fullscreen overlay styles
+        assert "fsOverlay" in content, "Missing fsOverlay style"
+        assert "fsTopBar" in content, "Missing fsTopBar style"
+        assert "fsBottomBar" in content, "Missing fsBottomBar style"
+        
+        # Check for channel name display
+        assert "fsChannelName" in content, "Missing fsChannelName style"
+        
+        # Check for play/pause control
+        assert "isPlaying ? 'pause' : 'play'" in content, "Missing play/pause toggle"
+        print("✓ live.tsx: Fullscreen overlay with top bar, bottom bar, and controls")
+
+
+class TestTabsLayoutPortraitLock:
+    """Verify tabs layout locks to portrait by default"""
+    
+    def test_tabs_layout_portrait_lock(self):
+        """tabs/_layout.tsx should lock portrait on mount"""
+        with open("/app/frontend/app/(tabs)/_layout.tsx", "r") as f:
+            content = f.read()
+        
+        # Check for useEffect with portrait lock
+        assert "useEffect" in content, "Missing useEffect hook"
+        assert "ScreenOrientation" in content, "Missing ScreenOrientation import"
+        assert "PORTRAIT_UP" in content, "Missing PORTRAIT_UP lock"
+        assert "lockAsync" in content, "Missing lockAsync call"
+        print("✓ tabs/_layout.tsx: Portrait lock on mount")
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v", "--tb=short"])
