@@ -723,6 +723,8 @@ export default function LiveScreen() {
         )
       )}
     </SafeAreaView>
+      )}
+    </View>
   );
 }
 
