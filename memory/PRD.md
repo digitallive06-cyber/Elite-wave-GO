@@ -4,26 +4,28 @@
 Elite Wave is a full-stack IPTV mobile application built with Expo (React Native) and FastAPI. It connects to Xtream Codes API servers to provide live TV, VOD, TV Series, Catch-Up, and EPG content with video playback.
 
 ## Architecture
-- **Frontend**: Expo (React Native) with expo-router, expo-video for playback
+- **Frontend**: Expo (React Native) with expo-router, expo-av for playback
 - **Backend**: FastAPI (Python) proxy to Xtream Codes API + stream URL resolver
 - **Database**: MongoDB for user history and favorites
 - **IPTV Server**: Xtream Codes API at `https://elitewavenetwork.xyz:443`
 - **Local Storage**: AsyncStorage for device-local favorites persistence
 
-## Key Architecture Decision: Inline Fullscreen
-The live screen's fullscreen player is handled WITHIN `live.tsx` using the same `inlinePlayer` instance. This means:
+## Key Architecture Decision: Inline Fullscreen with expo-av
+The live screen's fullscreen player is handled WITHIN `live.tsx` using a **single persistent `<Video />` component from expo-av**. This means:
 - **No navigation** to player.tsx for live TV fullscreen
-- **Same video player** continues playing — no stream restart, no double audio
+- **Same video component** continues playing — no stream restart, no double audio
+- **Style-based fullscreen**: Container style toggles between `previewContainer` and `fullscreenContainer`
 - **Bidirectional rotation**: landscape → fullscreen, portrait → exit fullscreen
-- **Tab bar hidden/shown** programmatically via `navigation.getParent().setOptions()`
+- **Tab bar hidden/shown** programmatically via `navigation.getParent().setOptions({ tabBarStyle })`
 - **player.tsx** is only used when navigating from the Home screen (separate player instance)
 
 ## Features Implemented
 
-### Video Player Architecture
-- **Live TV fullscreen**: Inline within `live.tsx` — same `useVideoPlayer` instance, toggle `isFullscreen` state
+### Video Player Architecture (Updated Feb 2025)
+- **Live TV fullscreen**: Single expo-av `<Video />` component in `live.tsx` with style-based fullscreen toggle
+- **Screen ratio control**: FIT/FILL/STRETCH toggle button using `ResizeMode.CONTAIN/COVER/STRETCH`
 - **Home screen player**: Separate `player.tsx` screen with its own player instance
-- **Multiview**: `multiview.tsx` with 4 independent `useVideoPlayer` instances, audio from active slot only
+- **Multiview**: `multiview.tsx` with 4 independent VideoView instances, audio from active slot only
 
 ### Orientation Handling
 - **Home/VOD/Series/Catch-Up tabs**: Locked to portrait (tabs `_layout.tsx`)
@@ -52,32 +54,36 @@ The live screen's fullscreen player is handled WITHIN `live.tsx` using the same 
 - Full channel EPG guide below inline player
 
 ### Player Controls (Fullscreen)
-- Top bar: back button, channel name, FIT/COVER/FILL toggle
-- Side: channel up/down arrows
-- Bottom: favorites star, info, skip-back, play/pause, skip-forward, share, multiview grid
-- EPG info: channel name, program title, LIVE badge, progress bar
-- Auto-hide controls after 5 seconds, tap to toggle
+- Top bar: back button, channel name, FIT/FILL/STRETCH toggle button
+- Bottom: play/pause, multiview grid button
+- EPG info: program title display
 - Android back button exits fullscreen
 
 ## Changelog
 - 2025: Initial IPTV app (login, home, live, vod, series, catchup, player)
-- 2026-02: EPG batch endpoint, landscape lock, player UI improvements
-- 2026-02: Favorites system (context + AsyncStorage + backend API + UI)
-- 2026-02: Removed duplicate top TV guide overlay from player
-- 2026-02: Portrait lock for all tab screens
-- 2026-02: **Major refactor**: Fullscreen in live screen now handled INLINE (same player, no navigation)
-- 2026-02: Bidirectional orientation listener (landscape→fullscreen, portrait→exit)
-- 2026-02: Multiview with audio routing (pause previous player before entering)
-- 2026-02: Android BackHandler for fullscreen exit
+- 2025-02: EPG batch endpoint, landscape lock, player UI improvements
+- 2025-02: Favorites system (context + AsyncStorage + backend API + UI)
+- 2025-02: Removed duplicate top TV guide overlay from player
+- 2025-02: Portrait lock for all tab screens
+- 2025-02: **Major refactor**: Fullscreen in live screen now handled INLINE (same player, no navigation)
+- 2025-02: Bidirectional orientation listener (landscape→fullscreen, portrait→exit)
+- 2025-02: Multiview with audio routing (pause previous player before entering)
+- 2025-02: Android BackHandler for fullscreen exit
+- **2025-02-25**: **CRITICAL FIX** - Migrated from expo-video to expo-av for reliable fullscreen
+  - Single persistent `<Video />` component with style-based fullscreen toggle
+  - Added useWindowDimensions for dynamic fullscreen dimensions
+  - Added tab bar hide/show via navigation.getParent().setOptions()
+  - Added screen ratio control (FIT/FILL/STRETCH) with toggle button
 
 ## Next Steps
 
 ### P1 - High Priority
+- Test fullscreen on physical Android device to verify seamless behavior
 - Series episode drill-down and playback
 - VOD detail page with info/description
-- Catch-up playback integration
 
 ### P2 - Nice to Have
+- Catch-up playback integration
 - Full EPG timeline view
 - VOD/Series search and filtering
 - Settings screen (theme switching)
