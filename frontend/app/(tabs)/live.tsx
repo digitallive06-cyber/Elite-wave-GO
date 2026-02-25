@@ -205,35 +205,28 @@ export default function LiveScreen() {
     loadFullEpg(item.stream_id);
   };
 
-  // Fullscreen: navigate to player.tsx with pre-resolved URL
-  const navigatingRef = useRef(false);
-
+  // Fullscreen toggle - just change container style, no navigation, no remount
   const goFullscreen = useCallback(() => {
-    if (!activeChannel || navigatingRef.current) return;
-    navigatingRef.current = true;
-    // Pause inline player to prevent double audio
-    try { inlinePlayer.pause(); } catch {}
-    const cat = categories.find((c: any) => c.category_id === activeChannel.category_id);
-    router.push({
-      pathname: '/player',
-      params: {
-        streamId: String(activeChannel.stream_id),
-        streamName: activeChannel.name,
-        streamIcon: activeChannel.stream_icon || '',
-        streamType: 'live',
-        categoryName: cat?.category_name || '',
-        categoryId: selectedCategory || activeChannel.category_id || '',
-        containerExtension: 'ts',
-        directUrl: streamUrl || '',
-      },
-    });
-  }, [activeChannel, categories, selectedCategory, router, streamUrl, inlinePlayer]);
+    if (!activeChannel) return;
+    setIsFullscreen(true);
+    if (Platform.OS !== 'web') {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
+      NavigationBar.setVisibilityAsync('hidden').catch(() => {});
+    }
+  }, [activeChannel]);
+
+  const exitFullscreen = useCallback(() => {
+    setIsFullscreen(false);
+    if (Platform.OS !== 'web') {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+      NavigationBar.setVisibilityAsync('visible').catch(() => {});
+    }
+  }, []);
 
   // Navigate to multiview
   const openMultiview = useCallback(() => {
-    if (navigatingRef.current) return;
-    navigatingRef.current = true;
-    try { inlinePlayer.pause(); } catch {}
+    if (videoRef.current) videoRef.current.pauseAsync().catch(() => {});
+    if (isFullscreen) exitFullscreen();
     router.push({
       pathname: '/multiview',
       params: {
@@ -244,48 +237,59 @@ export default function LiveScreen() {
         directUrl: streamUrl || '',
       },
     });
-  }, [activeChannel, streamUrl, selectedCategory, router, inlinePlayer]);
+  }, [activeChannel, streamUrl, selectedCategory, router, isFullscreen, exitFullscreen]);
 
-  // Rotation detection via Dimensions API (more reliable than ScreenOrientation listener)
+  // Orientation listener - landscape=fullscreen, portrait=exit
   useEffect(() => {
-    if (Platform.OS === 'web') return;
-    if (!activeChannel || !streamUrl) {
-      // No channel - ensure portrait lock
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
-      return;
-    }
+    if (Platform.OS === 'web' || !activeChannel) return;
     // Unlock orientation so rotation can be detected
     ScreenOrientation.unlockAsync().catch(() => {});
-    const sub = Dimensions.addEventListener('change', ({ window }) => {
-      if (window.width > window.height && !navigatingRef.current) {
-        goFullscreen();
+    const subscription = ScreenOrientation.addOrientationChangeListener((event) => {
+      const o = event.orientationInfo.orientation;
+      if (
+        o === ScreenOrientation.Orientation.LANDSCAPE_LEFT ||
+        o === ScreenOrientation.Orientation.LANDSCAPE_RIGHT
+      ) {
+        setIsFullscreen(true);
+        NavigationBar.setVisibilityAsync('hidden').catch(() => {});
+      } else {
+        setIsFullscreen(false);
+        NavigationBar.setVisibilityAsync('visible').catch(() => {});
       }
     });
-    return () => sub.remove();
-  }, [activeChannel, streamUrl, goFullscreen]);
+    return () => {
+      ScreenOrientation.removeOrientationChangeListener(subscription);
+    };
+  }, [activeChannel]);
 
-  // Video player for inline preview
-  const inlinePlayer = useVideoPlayer(streamUrl || '', (p) => {
-    if (streamUrl) p.play();
-  });
+  // Android back button - exit fullscreen
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const backAction = () => {
+      if (isFullscreen) {
+        exitFullscreen();
+        return true;
+      }
+      return false;
+    };
+    const handler = BackHandler.addEventListener('hardwareBackPress', backAction);
+    return () => handler.remove();
+  }, [isFullscreen, exitFullscreen]);
 
-  const { isPlaying } = useEvent(inlinePlayer, 'playingChange', { isPlaying: inlinePlayer.playing });
-
-  // Pause inline player when screen loses focus; resume on focus gain
+  // Pause/resume on screen focus
   useFocusEffect(
     useCallback(() => {
-      navigatingRef.current = false; // Reset navigation guard
-      // Resume player when returning from fullscreen/multiview
-      if (activeChannel && streamUrl) {
-        try { inlinePlayer.play(); } catch {}
+      // Resume when returning from multiview
+      if (activeChannel && streamUrl && videoRef.current) {
+        videoRef.current.playAsync().catch(() => {});
       }
       return () => {
-        try { inlinePlayer.pause(); } catch {}
+        if (videoRef.current) videoRef.current.pauseAsync().catch(() => {});
         if (Platform.OS !== 'web') {
           ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
         }
       };
-    }, [inlinePlayer, activeChannel, streamUrl])
+    }, [activeChannel, streamUrl])
   );
 
   // Filtered programs for TV guide
