@@ -480,73 +480,106 @@ export default function LiveScreen() {
 
   // ==================== RENDER ====================
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <StatusBar style="light" />
-      {/* Inline Hero Player (when a channel is active) */}
-      {activeChannel && (
-        <View style={styles.inlinePlayerSection}>
-          <View style={styles.inlinePlayerWrap}>
-            {playerLoading ? (
-              <View style={styles.inlineLoading}>
-                <ActivityIndicator size="small" color="#00BFFF" />
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <StatusBar hidden={isFullscreen} style="light" />
+
+      {/* ONE Video component - toggles between preview and fullscreen via container style */}
+      {activeChannel && streamUrl && (
+        <View style={isFullscreen ? styles.fullscreenContainer : styles.previewContainer}>
+          <Video
+            ref={videoRef}
+            testID="live-video-player"
+            source={{ uri: streamUrl }}
+            style={styles.video}
+            resizeMode={ResizeMode.CONTAIN}
+            shouldPlay
+            useNativeControls={false}
+            onPlaybackStatusUpdate={(status: any) => {
+              if (status.isLoaded) setIsPlaying(status.isPlaying);
+            }}
+          />
+          {/* Fullscreen controls overlay */}
+          {isFullscreen && (
+            <View style={styles.fsOverlay} pointerEvents="box-none">
+              <View style={styles.fsTopBar}>
+                <TouchableOpacity testID="fs-back-btn" style={styles.fsTopBtn} onPress={exitFullscreen}>
+                  <Ionicons name="chevron-back" size={22} color="#fff" />
+                </TouchableOpacity>
+                <Text style={styles.fsChannelName} numberOfLines={1}>{activeChannel.name}</Text>
               </View>
-            ) : streamUrl ? (
-              <TouchableOpacity activeOpacity={0.95} onPress={goFullscreen} style={styles.inlineVideoTouch}>
-                <VideoView
-                  testID="inline-video-player"
-                  style={styles.inlineVideo}
-                  player={inlinePlayer}
-                  contentFit="contain"
-                  nativeControls={false}
-                />
-              </TouchableOpacity>
-            ) : null}
-            {/* Overlay info */}
-            <View style={styles.inlineOverlay}>
-              <View style={styles.inlineInfoRow}>
-                {activeChannel.stream_icon ? (
-                  <Image source={{ uri: activeChannel.stream_icon }} style={styles.inlineIcon} resizeMode="contain" />
+              <View style={styles.fsBottomBar}>
+                {playerEpg?.current?.title ? (
+                  <Text style={styles.fsProgramName} numberOfLines={1}>{playerEpg.current.title}</Text>
                 ) : null}
-                <View style={styles.inlineInfoText}>
-                  <Text style={styles.inlineChannelName} numberOfLines={1}>{activeChannel.name}</Text>
-                  {playerEpg?.current?.title ? (
-                    <Text style={styles.inlineProgramName} numberOfLines={1}>{playerEpg.current.title}</Text>
-                  ) : null}
-                </View>
-                <View style={styles.inlineLiveBadge}>
-                  <Text style={styles.inlineLiveText}>LIVE</Text>
+                <View style={styles.fsControlsRow}>
+                  <TouchableOpacity style={styles.fsCtrlBtn} onPress={() => {
+                    if (videoRef.current) {
+                      isPlaying ? videoRef.current.pauseAsync() : videoRef.current.playAsync();
+                    }
+                  }}>
+                    <Ionicons name={isPlaying ? 'pause' : 'play'} size={28} color="#fff" />
+                  </TouchableOpacity>
+                  <TouchableOpacity testID="fs-multiview-btn" style={styles.fsCtrlBtn} onPress={openMultiview}>
+                    <Ionicons name="grid-outline" size={22} color="#fff" />
+                  </TouchableOpacity>
                 </View>
               </View>
-              {playerEpg?.current && (
-                <View style={styles.inlineProgress}>
-                  <View style={styles.inlineProgressBar}>
-                    <View style={[styles.inlineProgressFill, { width: `${playerProgress * 100}%` }]} />
+            </View>
+          )}
+          {/* Inline overlay - only when NOT fullscreen */}
+          {!isFullscreen && (
+            <>
+              <View style={styles.inlineOverlay}>
+                <View style={styles.inlineInfoRow}>
+                  {activeChannel.stream_icon ? (
+                    <Image source={{ uri: activeChannel.stream_icon }} style={styles.inlineIcon} resizeMode="contain" />
+                  ) : null}
+                  <View style={styles.inlineInfoText}>
+                    <Text style={styles.inlineChannelName} numberOfLines={1}>{activeChannel.name}</Text>
+                    {playerEpg?.current?.title ? (
+                      <Text style={styles.inlineProgramName} numberOfLines={1}>{playerEpg.current.title}</Text>
+                    ) : null}
+                  </View>
+                  <View style={styles.inlineLiveBadge}>
+                    <Text style={styles.inlineLiveText}>LIVE</Text>
                   </View>
                 </View>
-              )}
-            </View>
-            {/* Controls */}
-            <View style={styles.inlineControls}>
-              <TouchableOpacity testID="inline-close-btn" style={styles.inlineControlBtn} onPress={() => {
-                try { inlinePlayer.pause(); } catch (e) {}
-                setActiveChannel(null);
-                setStreamUrl(null);
-                setChannelFullEpg([]);
-              }}>
-                <Ionicons name="close" size={18} color="#fff" />
-              </TouchableOpacity>
-              <TouchableOpacity testID="inline-play-btn" style={styles.inlineControlBtn} onPress={() => {
-                if (inlinePlayer.playing) inlinePlayer.pause(); else inlinePlayer.play();
-              }}>
-                <Ionicons name={isPlaying ? 'pause' : 'play'} size={18} color="#fff" />
-              </TouchableOpacity>
-              <TouchableOpacity testID="inline-fullscreen-btn" style={styles.inlineControlBtn} onPress={goFullscreen}>
-                <Ionicons name="expand" size={18} color="#fff" />
-              </TouchableOpacity>
-            </View>
-          </View>
+                {playerEpg?.current && (
+                  <View style={styles.inlineProgress}>
+                    <View style={styles.inlineProgressBar}>
+                      <View style={[styles.inlineProgressFill, { width: `${playerProgress * 100}%` }]} />
+                    </View>
+                  </View>
+                )}
+              </View>
+              <View style={styles.inlineControls}>
+                <TouchableOpacity testID="inline-close-btn" style={styles.inlineControlBtn} onPress={() => {
+                  if (videoRef.current) videoRef.current.pauseAsync().catch(() => {});
+                  setActiveChannel(null); setStreamUrl(null); setChannelFullEpg([]);
+                }}>
+                  <Ionicons name="close" size={18} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity testID="inline-play-btn" style={styles.inlineControlBtn} onPress={() => {
+                  if (videoRef.current) { isPlaying ? videoRef.current.pauseAsync() : videoRef.current.playAsync(); }
+                }}>
+                  <Ionicons name={isPlaying ? 'pause' : 'play'} size={18} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity testID="inline-fullscreen-btn" style={styles.inlineControlBtn} onPress={goFullscreen}>
+                  <Ionicons name="expand" size={18} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
         </View>
       )}
+      {/* Loading spinner for channel */}
+      {activeChannel && playerLoading && !streamUrl && (
+        <View style={styles.previewContainer}><View style={styles.inlineLoading}><ActivityIndicator size="small" color="#00BFFF" /></View></View>
+      )}
+
+      {/* Everything below is hidden when fullscreen */}
+      {!isFullscreen && (
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
 
       {/* CHANNEL LIST MODE (no active channel) */}
       {!activeChannel && (
