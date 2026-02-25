@@ -505,7 +505,7 @@ export default function LiveScreen() {
             testID="live-video-player"
             source={{ uri: streamUrl }}
             style={styles.video}
-            resizeMode={ResizeMode.CONTAIN}
+            resizeMode={resizeModes[resizeModeIdx]}
             shouldPlay
             useNativeControls={false}
             onPlaybackStatusUpdate={(status: any) => {
@@ -520,6 +520,10 @@ export default function LiveScreen() {
                   <Ionicons name="chevron-back" size={22} color="#fff" />
                 </TouchableOpacity>
                 <Text style={styles.fsChannelName} numberOfLines={1}>{activeChannel.name}</Text>
+                {/* Screen ratio toggle button */}
+                <TouchableOpacity testID="fs-ratio-btn" style={styles.fsRatioBtn} onPress={cycleResizeMode}>
+                  <Text style={styles.fsRatioBtnText}>{resizeModeLabels[resizeModeIdx]}</Text>
+                </TouchableOpacity>
               </View>
               <View style={styles.fsBottomBar}>
                 {playerEpg?.current?.title ? (
