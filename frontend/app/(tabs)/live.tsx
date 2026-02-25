@@ -257,16 +257,18 @@ export default function LiveScreen() {
         o === ScreenOrientation.Orientation.LANDSCAPE_RIGHT
       ) {
         setIsFullscreen(true);
+        navigation.getParent()?.setOptions({ tabBarStyle: { display: 'none' } });
         NavigationBar.setVisibilityAsync('hidden').catch(() => {});
       } else {
         setIsFullscreen(false);
+        navigation.getParent()?.setOptions({ tabBarStyle: undefined });
         NavigationBar.setVisibilityAsync('visible').catch(() => {});
       }
     });
     return () => {
       ScreenOrientation.removeOrientationChangeListener(subscription);
     };
-  }, [activeChannel]);
+  }, [activeChannel, navigation]);
 
   // Android back button - exit fullscreen
   useEffect(() => {
