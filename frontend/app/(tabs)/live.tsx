@@ -33,6 +33,7 @@ export default function LiveScreen() {
   // Refs for active channel/stream (used in callbacks to avoid stale closures)
   const activeChannelRef = useRef<any>(null);
   const streamUrlRef = useRef<string | null>(null);
+  const videoRef = useRef<any>(null);
 
   const [categories, setCategories] = useState<any[]>([]);
   const [streams, setStreams] = useState<any[]>([]);
@@ -50,6 +51,10 @@ export default function LiveScreen() {
   const [playerLoading, setPlayerLoading] = useState(false);
   const [playerEpg, setPlayerEpg] = useState<{ current: any; next: any } | null>(null);
   const [playerProgress, setPlayerProgress] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  // Fullscreen state - ONE Video, toggle container style
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Full TV guide state
   const [channelFullEpg, setChannelFullEpg] = useState<any[]>([]);
