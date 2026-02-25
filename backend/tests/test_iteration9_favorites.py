@@ -15,7 +15,7 @@ frontend_env = Path(__file__).parent.parent.parent / 'frontend' / '.env'
 if frontend_env.exists():
     load_dotenv(frontend_env)
 
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://xtream-codes-app-1.preview.emergentagent.com')
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://multiview-iptv.preview.emergentagent.com')
 
 # Test username (unique per test run to avoid conflicts)
 TEST_USERNAME = f"TEST_user_{uuid.uuid4().hex[:8]}"

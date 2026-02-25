@@ -10,7 +10,7 @@ if frontend_env.exists():
     load_dotenv(frontend_env)
 
 # Test backend health and auth endpoints
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://xtream-codes-app-1.preview.emergentagent.com')
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://multiview-iptv.preview.emergentagent.com')
 
 class TestHealthEndpoint:
     """Health check endpoint tests"""
