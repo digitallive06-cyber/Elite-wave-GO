@@ -946,4 +946,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  fsRatioBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    marginLeft: 12,
+  },
+  fsRatioBtnText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
 });
