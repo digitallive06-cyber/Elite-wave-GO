@@ -486,7 +486,7 @@ export default function LiveScreen() {
 
       {/* ONE Video component - toggles between preview and fullscreen via container style */}
       {activeChannel && streamUrl && (
-        <View style={isFullscreen ? styles.fullscreenContainer : styles.previewContainer}>
+        <View style={isFullscreen ? [styles.fullscreenContainer, { width: windowW, height: windowH }] : styles.previewContainer}>
           <Video
             ref={videoRef}
             testID="live-video-player"
