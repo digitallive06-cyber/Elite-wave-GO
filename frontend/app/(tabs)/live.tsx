@@ -505,7 +505,17 @@ export default function LiveScreen() {
             style={styles.video}
             resizeMode={resizeModes[resizeModeIdx]}
             shouldPlay
-            useNativeControls={false}
+            useNativeControls={true}
+            onFullscreenUpdate={(event: any) => {
+              // Sync state when native fullscreen changes
+              if (event.fullscreenUpdate === 1) {
+                // Entering fullscreen
+                setIsFullscreen(true);
+              } else if (event.fullscreenUpdate === 3) {
+                // Exiting fullscreen
+                setIsFullscreen(false);
+              }
+            }}
             onPlaybackStatusUpdate={(status: any) => {
               if (status.isLoaded) setIsPlaying(status.isPlaying);
             }}
