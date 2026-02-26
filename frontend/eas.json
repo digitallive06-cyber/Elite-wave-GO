@@ -7,28 +7,22 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "node": "22.12.0",
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleDebug",
-        "withoutCredentials": true,
-        "image": "latest"
+        "withoutCredentials": true
       }
     },
     "preview": {
       "distribution": "internal",
-      "node": "22.12.0",
       "android": {
         "buildType": "apk",
-        "withoutCredentials": true,
-        "image": "ubuntu-22.04-jdk-17-ndk-r26b"
+        "withoutCredentials": true
       }
     },
     "production": {
-      "node": "22.12.0",
       "android": {
-        "buildType": "apk",
-        "image": "ubuntu-22.04-jdk-17-ndk-r26b"
+        "buildType": "apk"
       }
     }
   },
