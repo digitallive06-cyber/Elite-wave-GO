@@ -521,46 +521,44 @@ export default function LiveScreen() {
           />
           {/* Inline overlay with channel info and controls */}
           <View style={styles.inlineOverlay}>
-                <View style={styles.inlineInfoRow}>
-                  {activeChannel.stream_icon ? (
-                    <Image source={{ uri: activeChannel.stream_icon }} style={styles.inlineIcon} resizeMode="contain" />
-                  ) : null}
-                  <View style={styles.inlineInfoText}>
-                    <Text style={styles.inlineChannelName} numberOfLines={1}>{activeChannel.name}</Text>
-                    {playerEpg?.current?.title ? (
-                      <Text style={styles.inlineProgramName} numberOfLines={1}>{playerEpg.current.title}</Text>
-                    ) : null}
-                  </View>
-                  <View style={styles.inlineLiveBadge}>
-                    <Text style={styles.inlineLiveText}>LIVE</Text>
-                  </View>
+            <View style={styles.inlineInfoRow}>
+              {activeChannel.stream_icon ? (
+                <Image source={{ uri: activeChannel.stream_icon }} style={styles.inlineIcon} resizeMode="contain" />
+              ) : null}
+              <View style={styles.inlineInfoText}>
+                <Text style={styles.inlineChannelName} numberOfLines={1}>{activeChannel.name}</Text>
+                {playerEpg?.current?.title ? (
+                  <Text style={styles.inlineProgramName} numberOfLines={1}>{playerEpg.current.title}</Text>
+                ) : null}
+              </View>
+              <View style={styles.inlineLiveBadge}>
+                <Text style={styles.inlineLiveText}>LIVE</Text>
+              </View>
+            </View>
+            {playerEpg?.current && (
+              <View style={styles.inlineProgress}>
+                <View style={styles.inlineProgressBar}>
+                  <View style={[styles.inlineProgressFill, { width: `${playerProgress * 100}%` }]} />
                 </View>
-                {playerEpg?.current && (
-                  <View style={styles.inlineProgress}>
-                    <View style={styles.inlineProgressBar}>
-                      <View style={[styles.inlineProgressFill, { width: `${playerProgress * 100}%` }]} />
-                    </View>
-                  </View>
-                )}
               </View>
-              <View style={styles.inlineControls}>
-                <TouchableOpacity testID="inline-close-btn" style={styles.inlineControlBtn} onPress={() => {
-                  if (videoRef.current) videoRef.current.pauseAsync().catch(() => {});
-                  setActiveChannel(null); setStreamUrl(null); setChannelFullEpg([]);
-                }}>
-                  <Ionicons name="close" size={18} color="#fff" />
-                </TouchableOpacity>
-                <TouchableOpacity testID="inline-play-btn" style={styles.inlineControlBtn} onPress={() => {
-                  if (videoRef.current) { isPlaying ? videoRef.current.pauseAsync() : videoRef.current.playAsync(); }
-                }}>
-                  <Ionicons name={isPlaying ? 'pause' : 'play'} size={18} color="#fff" />
-                </TouchableOpacity>
-                <TouchableOpacity testID="inline-fullscreen-btn" style={styles.inlineControlBtn} onPress={goFullscreen}>
-                  <Ionicons name="expand" size={18} color="#fff" />
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
+            )}
+          </View>
+          <View style={styles.inlineControls}>
+            <TouchableOpacity testID="inline-close-btn" style={styles.inlineControlBtn} onPress={() => {
+              if (videoRef.current) videoRef.current.pauseAsync().catch(() => {});
+              setActiveChannel(null); setStreamUrl(null); setChannelFullEpg([]);
+            }}>
+              <Ionicons name="close" size={18} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity testID="inline-play-btn" style={styles.inlineControlBtn} onPress={() => {
+              if (videoRef.current) { isPlaying ? videoRef.current.pauseAsync() : videoRef.current.playAsync(); }
+            }}>
+              <Ionicons name={isPlaying ? 'pause' : 'play'} size={18} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity testID="inline-fullscreen-btn" style={styles.inlineControlBtn} onPress={goFullscreen}>
+              <Ionicons name="expand" size={18} color="#fff" />
+            </TouchableOpacity>
+          </View>
         </View>
       )}
       {/* Loading spinner for channel */}
