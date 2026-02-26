@@ -60,14 +60,15 @@ export default function HomeScreen() {
   const onRefresh = () => { setRefreshing(true); loadData(); };
 
   const lastWatched = history.length > 0 ? history[0] : null;
-  const heroVideoRef = useRef<any>(null);
 
-  // Setup hero video when URL is available
-  useEffect(() => {
-    if (heroVideoRef.current && heroStreamUrl) {
-      heroVideoRef.current.playAsync().catch(() => {});
+  // Hero video player
+  const heroPlayer = useVideoPlayer(heroStreamUrl || '', (p) => {
+    if (heroStreamUrl) {
+      p.loop = true;
+      p.volume = 0;
+      p.play();
     }
-  }, [heroStreamUrl]);
+  });
 
   const playStream = (item: any, type: string = 'live') => {
     router.push({
