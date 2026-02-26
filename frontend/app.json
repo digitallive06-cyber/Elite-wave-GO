@@ -44,11 +44,6 @@
     ],
     "experiments": {
       "typedRoutes": true
-    },
-    "extra": {
-      "eas": {
-        "projectId": "elite-wave-iptv"
-      }
     }
   }
 }
