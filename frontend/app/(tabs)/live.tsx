@@ -251,7 +251,7 @@ export default function LiveScreen() {
     });
   }, [activeChannel, streamUrl, selectedCategory, router, isFullscreen, exitFullscreen]);
 
-  // Orientation listener - landscape=fullscreen, portrait=exit
+  // Orientation listener - landscape=fullscreen, portrait=exit (only for rotation-triggered fullscreen)
   useEffect(() => {
     if (Platform.OS === 'web' || !activeChannel) return;
     // Unlock orientation so rotation can be detected
@@ -262,19 +262,17 @@ export default function LiveScreen() {
         o === ScreenOrientation.Orientation.LANDSCAPE_LEFT ||
         o === ScreenOrientation.Orientation.LANDSCAPE_RIGHT
       ) {
-        setIsFullscreen(true);
-        navigation.getParent()?.setOptions({ tabBarStyle: { display: 'none' } });
-        NavigationBar.setVisibilityAsync('hidden').catch(() => {});
-      } else {
-        setIsFullscreen(false);
-        navigation.getParent()?.setOptions({ tabBarStyle: undefined });
-        NavigationBar.setVisibilityAsync('visible').catch(() => {});
+        // Trigger native fullscreen on rotation
+        if (!isFullscreen && videoRef.current) {
+          videoRef.current.presentFullscreenPlayer().catch(() => {});
+          setIsFullscreen(true);
+        }
       }
     });
     return () => {
       ScreenOrientation.removeOrientationChangeListener(subscription);
     };
-  }, [activeChannel, navigation]);
+  }, [activeChannel, isFullscreen]);
 
   // Android back button - exit fullscreen
   useEffect(() => {
