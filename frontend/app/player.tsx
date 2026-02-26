@@ -38,7 +38,8 @@ export default function PlayerScreen() {
   );
   const [loading, setLoading] = useState(!params.directUrl || params.directUrl.length <= 5);
   const [error, setError] = useState('');
-  const [contentFit, setContentFit] = useState<ContentFit>('contain');
+  const [resizeModeIdx, setResizeModeIdx] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [epgCurrent, setEpgCurrent] = useState<any>(null);
   const [epgNext, setEpgNext] = useState<any>(null);
   const [epgProgress, setEpgProgress] = useState(0);
