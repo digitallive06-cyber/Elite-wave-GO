@@ -209,39 +209,23 @@ export default function LiveScreen() {
     loadFullEpg(item.stream_id);
   };
 
-  // Fullscreen toggle - LAYOUT-BASED fullscreen (reliable on all devices)
-  const goFullscreen = useCallback(async () => {
-    if (!activeChannel || !videoRef.current) {
-      console.log('goFullscreen: no active channel or videoRef');
+  // Fullscreen - use global video player
+  const goFullscreen = useCallback(() => {
+    if (!activeChannel || !streamUrl) {
+      console.log('goFullscreen: no active channel or streamUrl');
       return;
     }
-    console.log('goFullscreen: entering layout-based fullscreen');
-    setIsFullscreen(true);
-    // Hide tab bar
-    navigation.getParent()?.setOptions({ tabBarStyle: { display: 'none' } });
-    if (Platform.OS !== 'web') {
-      // Force landscape orientation
-      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
-      NavigationBar.setVisibilityAsync('hidden').catch(() => {});
-    }
-  }, [activeChannel, navigation]);
-
-  const exitFullscreen = useCallback(async () => {
-    console.log('exitFullscreen: exiting layout-based fullscreen');
-    setIsFullscreen(false);
-    // Show tab bar again
-    navigation.getParent()?.setOptions({ tabBarStyle: undefined });
-    if (Platform.OS !== 'web') {
-      // Return to portrait
-      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
-      NavigationBar.setVisibilityAsync('visible').catch(() => {});
-    }
-  }, [navigation]);
+    // Pause local video
+    if (videoRef.current) videoRef.current.pauseAsync().catch(() => {});
+    // Play on global player and set fullscreen
+    globalPlayStream(streamUrl, activeChannel.name, activeChannel.stream_icon || '', playerEpg?.current?.title || '');
+    setFullscreen(true);
+  }, [activeChannel, streamUrl, playerEpg, globalPlayStream, setFullscreen]);
 
   // Navigate to multiview
   const openMultiview = useCallback(() => {
     if (videoRef.current) videoRef.current.pauseAsync().catch(() => {});
-    exitFullscreen();
+    setFullscreen(false);
     router.push({
       pathname: '/multiview',
       params: {
@@ -252,46 +236,7 @@ export default function LiveScreen() {
         directUrl: streamUrl || '',
       },
     });
-  }, [activeChannel, streamUrl, selectedCategory, router, exitFullscreen]);
-
-  // Orientation listener - detect rotation and toggle fullscreen
-  useEffect(() => {
-    if (Platform.OS === 'web' || !activeChannel) return;
-    
-    // Unlock orientation so rotation can be detected
-    ScreenOrientation.unlockAsync().catch(() => {});
-    
-    const subscription = ScreenOrientation.addOrientationChangeListener(async (event) => {
-      const o = event.orientationInfo.orientation;
-      console.log('Orientation changed:', o);
-      
-      if (
-        o === ScreenOrientation.Orientation.LANDSCAPE_LEFT ||
-        o === ScreenOrientation.Orientation.LANDSCAPE_RIGHT
-      ) {
-        // LANDSCAPE - enter fullscreen
-        if (!isFullscreen) {
-          setIsFullscreen(true);
-          navigation.getParent()?.setOptions({ tabBarStyle: { display: 'none' } });
-          NavigationBar.setVisibilityAsync('hidden').catch(() => {});
-        }
-      } else if (
-        o === ScreenOrientation.Orientation.PORTRAIT_UP ||
-        o === ScreenOrientation.Orientation.PORTRAIT_DOWN
-      ) {
-        // PORTRAIT - exit fullscreen
-        if (isFullscreen) {
-          setIsFullscreen(false);
-          navigation.getParent()?.setOptions({ tabBarStyle: undefined });
-          NavigationBar.setVisibilityAsync('visible').catch(() => {});
-        }
-      }
-    });
-    
-    return () => {
-      ScreenOrientation.removeOrientationChangeListener(subscription);
-    };
-  }, [activeChannel, isFullscreen, navigation]);
+  }, [activeChannel, streamUrl, selectedCategory, router, setFullscreen]);
 
   // Android back button - exit fullscreen
   useEffect(() => {
