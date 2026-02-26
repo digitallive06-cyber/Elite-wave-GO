@@ -117,12 +117,15 @@ export default function HomeScreen() {
           onPress={() => lastWatched && playStream(lastWatched, lastWatched.stream_type || 'live')}
         >
           {heroStreamUrl ? (
-            <VideoView
+            <Video
+              ref={heroVideoRef}
               testID="hero-video"
               style={styles.heroVideo}
-              player={heroPlayer}
-              contentFit="cover"
-              nativeControls={false}
+              source={{ uri: heroStreamUrl }}
+              resizeMode={ResizeMode.COVER}
+              isLooping
+              isMuted
+              shouldPlay
             />
           ) : (
             <View style={styles.heroPlaceholder}>
