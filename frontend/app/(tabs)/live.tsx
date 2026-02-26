@@ -1,19 +1,17 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, Image,
-  TextInput, ActivityIndicator, RefreshControl, Platform, BackHandler,
-  useWindowDimensions, Dimensions,
+  TextInput, ActivityIndicator, RefreshControl, Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useFocusEffect, useNavigation } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Video, ResizeMode } from 'expo-av';
-import * as ScreenOrientation from 'expo-screen-orientation';
-import { StatusBar } from 'expo-status-bar';
-import * as NavigationBar from 'expo-navigation-bar';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useFavorites } from '../../src/contexts/FavoritesContext';
+import { useGlobalVideo } from '../../src/contexts/GlobalVideoContext';
 import { api } from '../../src/utils/api';
 
 const getDateStr = (date: Date) => {
@@ -27,14 +25,12 @@ export default function LiveScreen() {
   const { colors } = useTheme();
   const { username, password } = useAuth();
   const { favorites, isFavorite, toggleFavorite } = useFavorites();
+  const { playStream: globalPlayStream, setFullscreen, state: videoState } = useGlobalVideo();
   const router = useRouter();
-  const navigation = useNavigation();
-  const { width: windowW, height: windowH } = useWindowDimensions();
+  const { width: windowW } = useWindowDimensions();
   const PLAYER_HEIGHT = Platform.OS === 'web' ? 240 : Math.min(windowW * 9 / 16, 240);
 
-  // Refs for active channel/stream (used in callbacks to avoid stale closures)
-  const activeChannelRef = useRef<any>(null);
-  const streamUrlRef = useRef<string | null>(null);
+  // Local video ref for inline preview only
   const videoRef = useRef<any>(null);
 
   const [categories, setCategories] = useState<any[]>([]);
