@@ -51,14 +51,9 @@ export default function LiveScreen() {
   const [playerProgress, setPlayerProgress] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  // Fullscreen state - ONE Video, toggle container style
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  
-  // Screen ratio control - cycle: contain -> cover -> stretch
+  // Screen ratio control for inline preview
   const [resizeModeIdx, setResizeModeIdx] = useState(0);
   const resizeModes: ResizeMode[] = [ResizeMode.CONTAIN, ResizeMode.COVER, ResizeMode.STRETCH];
-  const resizeModeLabels = ['FIT', 'FILL', 'STRETCH'];
-  const cycleResizeMode = () => setResizeModeIdx((prev) => (prev + 1) % resizeModes.length);
 
   // Full TV guide state
   const [channelFullEpg, setChannelFullEpg] = useState<any[]>([]);
