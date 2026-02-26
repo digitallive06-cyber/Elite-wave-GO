@@ -495,9 +495,9 @@ export default function LiveScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <StatusBar hidden={isFullscreen} style="light" />
 
-      {/* ONE Video component - toggles between preview and fullscreen via container style */}
+      {/* ONE Video component - uses NATIVE fullscreen via presentFullscreenPlayer */}
       {activeChannel && streamUrl && (
-        <View style={isFullscreen ? [styles.fullscreenContainer, { width: windowW, height: windowH }] : styles.previewContainer}>
+        <View style={styles.previewContainer}>
           <Video
             ref={videoRef}
             testID="live-video-player"
@@ -508,11 +508,10 @@ export default function LiveScreen() {
             useNativeControls={true}
             onFullscreenUpdate={(event: any) => {
               // Sync state when native fullscreen changes
+              // 0 = PLAYER_WILL_PRESENT, 1 = PLAYER_DID_PRESENT, 2 = PLAYER_WILL_DISMISS, 3 = PLAYER_DID_DISMISS
               if (event.fullscreenUpdate === 1) {
-                // Entering fullscreen
                 setIsFullscreen(true);
               } else if (event.fullscreenUpdate === 3) {
-                // Exiting fullscreen
                 setIsFullscreen(false);
               }
             }}
@@ -520,42 +519,8 @@ export default function LiveScreen() {
               if (status.isLoaded) setIsPlaying(status.isPlaying);
             }}
           />
-          {/* Fullscreen controls overlay */}
-          {isFullscreen && (
-            <View style={styles.fsOverlay} pointerEvents="box-none">
-              <View style={styles.fsTopBar}>
-                <TouchableOpacity testID="fs-back-btn" style={styles.fsTopBtn} onPress={exitFullscreen}>
-                  <Ionicons name="chevron-back" size={22} color="#fff" />
-                </TouchableOpacity>
-                <Text style={styles.fsChannelName} numberOfLines={1}>{activeChannel.name}</Text>
-                {/* Screen ratio toggle button */}
-                <TouchableOpacity testID="fs-ratio-btn" style={styles.fsRatioBtn} onPress={cycleResizeMode}>
-                  <Text style={styles.fsRatioBtnText}>{resizeModeLabels[resizeModeIdx]}</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.fsBottomBar}>
-                {playerEpg?.current?.title ? (
-                  <Text style={styles.fsProgramName} numberOfLines={1}>{playerEpg.current.title}</Text>
-                ) : null}
-                <View style={styles.fsControlsRow}>
-                  <TouchableOpacity style={styles.fsCtrlBtn} onPress={() => {
-                    if (videoRef.current) {
-                      isPlaying ? videoRef.current.pauseAsync() : videoRef.current.playAsync();
-                    }
-                  }}>
-                    <Ionicons name={isPlaying ? 'pause' : 'play'} size={28} color="#fff" />
-                  </TouchableOpacity>
-                  <TouchableOpacity testID="fs-multiview-btn" style={styles.fsCtrlBtn} onPress={openMultiview}>
-                    <Ionicons name="grid-outline" size={22} color="#fff" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          )}
-          {/* Inline overlay - only when NOT fullscreen */}
-          {!isFullscreen && (
-            <>
-              <View style={styles.inlineOverlay}>
+          {/* Inline overlay with channel info and controls */}
+          <View style={styles.inlineOverlay}>
                 <View style={styles.inlineInfoRow}>
                   {activeChannel.stream_icon ? (
                     <Image source={{ uri: activeChannel.stream_icon }} style={styles.inlineIcon} resizeMode="contain" />
