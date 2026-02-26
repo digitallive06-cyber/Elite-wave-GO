@@ -215,21 +215,26 @@ export default function LiveScreen() {
 
   // Fullscreen toggle - USE NATIVE FULLSCREEN from expo-av
   const goFullscreen = useCallback(async () => {
-    if (!activeChannel || !videoRef.current) return;
+    if (!videoRef.current) {
+      console.log('goFullscreen: videoRef is null');
+      return;
+    }
     try {
-      // Use native fullscreen player - this is bulletproof
+      console.log('goFullscreen: calling presentFullscreenPlayer');
       await videoRef.current.presentFullscreenPlayer();
-      setIsFullscreen(true);
     } catch (e) {
       console.error('Failed to enter fullscreen:', e);
     }
-  }, [activeChannel]);
+  }, []);
 
   const exitFullscreen = useCallback(async () => {
-    if (!videoRef.current) return;
+    if (!videoRef.current) {
+      console.log('exitFullscreen: videoRef is null');
+      return;
+    }
     try {
+      console.log('exitFullscreen: calling dismissFullscreenPlayer');
       await videoRef.current.dismissFullscreenPlayer();
-      setIsFullscreen(false);
     } catch (e) {
       console.error('Failed to exit fullscreen:', e);
     }
@@ -238,7 +243,7 @@ export default function LiveScreen() {
   // Navigate to multiview
   const openMultiview = useCallback(() => {
     if (videoRef.current) videoRef.current.pauseAsync().catch(() => {});
-    if (isFullscreen) exitFullscreen();
+    exitFullscreen();
     router.push({
       pathname: '/multiview',
       params: {
@@ -249,30 +254,52 @@ export default function LiveScreen() {
         directUrl: streamUrl || '',
       },
     });
-  }, [activeChannel, streamUrl, selectedCategory, router, isFullscreen, exitFullscreen]);
+  }, [activeChannel, streamUrl, selectedCategory, router, exitFullscreen]);
 
-  // Orientation listener - landscape=fullscreen, portrait=exit (only for rotation-triggered fullscreen)
+  // Orientation listener - MUST call native fullscreen on landscape, dismiss on portrait
   useEffect(() => {
-    if (Platform.OS === 'web' || !activeChannel) return;
+    if (Platform.OS === 'web') return;
+    
     // Unlock orientation so rotation can be detected
     ScreenOrientation.unlockAsync().catch(() => {});
-    const subscription = ScreenOrientation.addOrientationChangeListener((event) => {
+    
+    const subscription = ScreenOrientation.addOrientationChangeListener(async (event) => {
       const o = event.orientationInfo.orientation;
+      console.log('Orientation changed:', o);
+      
       if (
         o === ScreenOrientation.Orientation.LANDSCAPE_LEFT ||
         o === ScreenOrientation.Orientation.LANDSCAPE_RIGHT
       ) {
-        // Trigger native fullscreen on rotation
-        if (!isFullscreen && videoRef.current) {
-          videoRef.current.presentFullscreenPlayer().catch(() => {});
-          setIsFullscreen(true);
+        // LANDSCAPE - enter native fullscreen
+        if (videoRef.current) {
+          console.log('Landscape detected - calling presentFullscreenPlayer');
+          try {
+            await videoRef.current.presentFullscreenPlayer();
+          } catch (e) {
+            console.error('presentFullscreenPlayer error:', e);
+          }
+        }
+      } else if (
+        o === ScreenOrientation.Orientation.PORTRAIT_UP ||
+        o === ScreenOrientation.Orientation.PORTRAIT_DOWN
+      ) {
+        // PORTRAIT - exit native fullscreen
+        if (videoRef.current) {
+          console.log('Portrait detected - calling dismissFullscreenPlayer');
+          try {
+            await videoRef.current.dismissFullscreenPlayer();
+          } catch (e) {
+            console.error('dismissFullscreenPlayer error:', e);
+          }
         }
       }
     });
+    
     return () => {
       ScreenOrientation.removeOrientationChangeListener(subscription);
     };
-  }, [activeChannel, isFullscreen]);
+  }, []); // No dependencies - runs once, uses ref directly
 
   // Android back button - exit fullscreen
   useEffect(() => {
