@@ -6,8 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useVideoPlayer, VideoView } from 'expo-video';
-import { useEvent } from 'expo';
+import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import { StatusBar } from 'expo-status-bar';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import * as NavigationBar from 'expo-navigation-bar';
@@ -16,9 +15,8 @@ import { useAuth } from '../src/contexts/AuthContext';
 import { useFavorites } from '../src/contexts/FavoritesContext';
 import { api } from '../src/utils/api';
 
-const ASPECT_MODES = ['contain', 'cover', 'fill'] as const;
-type ContentFit = typeof ASPECT_MODES[number];
-const ASPECT_LABELS: Record<ContentFit, string> = { contain: 'FIT', cover: 'FILL', fill: 'STRETCH' };
+const ASPECT_MODES = [ResizeMode.CONTAIN, ResizeMode.COVER, ResizeMode.STRETCH] as const;
+const ASPECT_LABELS = { [ResizeMode.CONTAIN]: 'FIT', [ResizeMode.COVER]: 'FILL', [ResizeMode.STRETCH]: 'STRETCH' };
 
 export default function PlayerScreen() {
   const { colors } = useTheme();
