@@ -213,27 +213,27 @@ export default function LiveScreen() {
     loadFullEpg(item.stream_id);
   };
 
-  // Fullscreen toggle - just change container style, no navigation, no remount
-  const goFullscreen = useCallback(() => {
-    if (!activeChannel) return;
-    setIsFullscreen(true);
-    // Hide tab bar
-    navigation.getParent()?.setOptions({ tabBarStyle: { display: 'none' } });
-    if (Platform.OS !== 'web') {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
-      NavigationBar.setVisibilityAsync('hidden').catch(() => {});
+  // Fullscreen toggle - USE NATIVE FULLSCREEN from expo-av
+  const goFullscreen = useCallback(async () => {
+    if (!activeChannel || !videoRef.current) return;
+    try {
+      // Use native fullscreen player - this is bulletproof
+      await videoRef.current.presentFullscreenPlayer();
+      setIsFullscreen(true);
+    } catch (e) {
+      console.error('Failed to enter fullscreen:', e);
     }
-  }, [activeChannel, navigation]);
+  }, [activeChannel]);
 
-  const exitFullscreen = useCallback(() => {
-    setIsFullscreen(false);
-    // Show tab bar again
-    navigation.getParent()?.setOptions({ tabBarStyle: undefined });
-    if (Platform.OS !== 'web') {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
-      NavigationBar.setVisibilityAsync('visible').catch(() => {});
+  const exitFullscreen = useCallback(async () => {
+    if (!videoRef.current) return;
+    try {
+      await videoRef.current.dismissFullscreenPlayer();
+      setIsFullscreen(false);
+    } catch (e) {
+      console.error('Failed to exit fullscreen:', e);
     }
-  }, [navigation]);
+  }, []);
 
   // Navigate to multiview
   const openMultiview = useCallback(() => {
