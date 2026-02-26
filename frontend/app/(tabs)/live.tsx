@@ -213,32 +213,34 @@ export default function LiveScreen() {
     loadFullEpg(item.stream_id);
   };
 
-  // Fullscreen toggle - USE NATIVE FULLSCREEN from expo-av
+  // Fullscreen toggle - LAYOUT-BASED fullscreen (reliable on all devices)
   const goFullscreen = useCallback(async () => {
-    if (!videoRef.current) {
-      console.log('goFullscreen: videoRef is null');
+    if (!activeChannel || !videoRef.current) {
+      console.log('goFullscreen: no active channel or videoRef');
       return;
     }
-    try {
-      console.log('goFullscreen: calling presentFullscreenPlayer');
-      await videoRef.current.presentFullscreenPlayer();
-    } catch (e) {
-      console.error('Failed to enter fullscreen:', e);
+    console.log('goFullscreen: entering layout-based fullscreen');
+    setIsFullscreen(true);
+    // Hide tab bar
+    navigation.getParent()?.setOptions({ tabBarStyle: { display: 'none' } });
+    if (Platform.OS !== 'web') {
+      // Force landscape orientation
+      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+      NavigationBar.setVisibilityAsync('hidden').catch(() => {});
     }
-  }, []);
+  }, [activeChannel, navigation]);
 
   const exitFullscreen = useCallback(async () => {
-    if (!videoRef.current) {
-      console.log('exitFullscreen: videoRef is null');
-      return;
+    console.log('exitFullscreen: exiting layout-based fullscreen');
+    setIsFullscreen(false);
+    // Show tab bar again
+    navigation.getParent()?.setOptions({ tabBarStyle: undefined });
+    if (Platform.OS !== 'web') {
+      // Return to portrait
+      await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+      NavigationBar.setVisibilityAsync('visible').catch(() => {});
     }
-    try {
-      console.log('exitFullscreen: calling dismissFullscreenPlayer');
-      await videoRef.current.dismissFullscreenPlayer();
-    } catch (e) {
-      console.error('Failed to exit fullscreen:', e);
-    }
-  }, []);
+  }, [navigation]);
 
   // Navigate to multiview
   const openMultiview = useCallback(() => {
@@ -256,9 +258,9 @@ export default function LiveScreen() {
     });
   }, [activeChannel, streamUrl, selectedCategory, router, exitFullscreen]);
 
-  // Orientation listener - MUST call native fullscreen on landscape, dismiss on portrait
+  // Orientation listener - detect rotation and toggle fullscreen
   useEffect(() => {
-    if (Platform.OS === 'web') return;
+    if (Platform.OS === 'web' || !activeChannel) return;
     
     // Unlock orientation so rotation can be detected
     ScreenOrientation.unlockAsync().catch(() => {});
@@ -271,27 +273,21 @@ export default function LiveScreen() {
         o === ScreenOrientation.Orientation.LANDSCAPE_LEFT ||
         o === ScreenOrientation.Orientation.LANDSCAPE_RIGHT
       ) {
-        // LANDSCAPE - enter native fullscreen
-        if (videoRef.current) {
-          console.log('Landscape detected - calling presentFullscreenPlayer');
-          try {
-            await videoRef.current.presentFullscreenPlayer();
-          } catch (e) {
-            console.error('presentFullscreenPlayer error:', e);
-          }
+        // LANDSCAPE - enter fullscreen
+        if (!isFullscreen) {
+          setIsFullscreen(true);
+          navigation.getParent()?.setOptions({ tabBarStyle: { display: 'none' } });
+          NavigationBar.setVisibilityAsync('hidden').catch(() => {});
         }
       } else if (
         o === ScreenOrientation.Orientation.PORTRAIT_UP ||
         o === ScreenOrientation.Orientation.PORTRAIT_DOWN
       ) {
-        // PORTRAIT - exit native fullscreen
-        if (videoRef.current) {
-          console.log('Portrait detected - calling dismissFullscreenPlayer');
-          try {
-            await videoRef.current.dismissFullscreenPlayer();
-          } catch (e) {
-            console.error('dismissFullscreenPlayer error:', e);
-          }
+        // PORTRAIT - exit fullscreen
+        if (isFullscreen) {
+          setIsFullscreen(false);
+          navigation.getParent()?.setOptions({ tabBarStyle: undefined });
+          NavigationBar.setVisibilityAsync('visible').catch(() => {});
         }
       }
     });
@@ -299,7 +295,7 @@ export default function LiveScreen() {
     return () => {
       ScreenOrientation.removeOrientationChangeListener(subscription);
     };
-  }, []); // No dependencies - runs once, uses ref directly
+  }, [activeChannel, isFullscreen, navigation]);
 
   // Android back button - exit fullscreen
   useEffect(() => {
