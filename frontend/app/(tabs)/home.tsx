@@ -34,12 +34,17 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Lock Home screen to portrait
-  useEffect(() => {
-    if (Platform.OS === 'web') return;
-    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
-    return () => { ScreenOrientation.unlockAsync().catch(() => {}); };
-  }, []);
+  // Lock Home screen to portrait and stop any active stream when Home gains focus
+  useFocusEffect(
+    useCallback(() => {
+      // Stop any playing global stream when returning to Home
+      stopStream();
+      // Lock to portrait
+      if (Platform.OS !== 'web') {
+        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+      }
+    }, [stopStream])
+  );
 
   const loadData = useCallback(async () => {
     if (!username || !password) return;
