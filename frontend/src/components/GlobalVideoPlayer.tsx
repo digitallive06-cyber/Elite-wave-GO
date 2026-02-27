@@ -21,6 +21,7 @@ export const GlobalVideoPlayer: React.FC = () => {
   const {
     videoRef, state, streamList, playStream, stopStream, setFullscreen,
     togglePlay, cycleResizeMode, setIsPlaying, setTransitioning, tryFallbackUrl, setMuted,
+    liveGuideActive,
   } = useGlobalVideo();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { username, password } = useAuth();
