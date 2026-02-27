@@ -90,6 +90,7 @@ export const GlobalVideoPlayer: React.FC = () => {
   // --- Orientation ---
   useEffect(() => {
     if (Platform.OS === 'web') return;
+    if (isOnMultiview) return; // Let multiview manage its own orientation
     if (!hasStream) { ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {}); return; }
     if (isFS) {
       ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE)
@@ -97,12 +98,16 @@ export const GlobalVideoPlayer: React.FC = () => {
         .catch(() => {});
       if (Platform.OS === 'android') NavigationBar.setVisibilityAsync('hidden').catch(() => {});
     } else {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP)
-        .then(() => { setTimeout(() => { if (!isFullscreenRef.current && state.streamUrl) ScreenOrientation.unlockAsync().catch(() => {}); }, 300); })
-        .catch(() => {});
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+      // Only unlock on Live tab to allow rotation-triggered fullscreen
+      if (isOnLiveTab) {
+        setTimeout(() => {
+          if (!isFullscreenRef.current && state.streamUrl) ScreenOrientation.unlockAsync().catch(() => {});
+        }, 300);
+      }
       if (Platform.OS === 'android') NavigationBar.setVisibilityAsync('visible').catch(() => {});
     }
-  }, [hasStream, isFS]);
+  }, [hasStream, isFS, isOnLiveTab, isOnMultiview]);
 
   // --- Back button ---
   useEffect(() => {
