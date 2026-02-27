@@ -326,7 +326,7 @@ export default function LiveScreen() {
       <TouchableOpacity
         testID="guide-back-btn"
         style={styles.guideBackRow}
-        onPress={() => setShowGuide(false)}
+        onPress={() => { setShowGuide(false); setLiveGuideActive(false); }}
       >
         <Ionicons name="chevron-back" size={20} color={colors.primary} />
         <Text style={[styles.guideBackText, { color: colors.primary }]}>Back to channels</Text>
