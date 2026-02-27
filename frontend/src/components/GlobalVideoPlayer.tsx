@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, TouchableWithoutFeedback,
+  View, Text, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, Pressable,
   Platform, BackHandler, useWindowDimensions, Image, Animated, StatusBar,
 } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
