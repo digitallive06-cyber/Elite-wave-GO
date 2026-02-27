@@ -246,8 +246,37 @@ export default function HomeScreen() {
             <View style={[styles.emptyRow, { backgroundColor: colors.surface }]}><Ionicons name="albums-outline" size={24} color={colors.textSecondary} /><Text style={[styles.emptyText, { color: colors.textSecondary }]}>No series available</Text></View>
           )}
         </View>
-        <View style={{ height: 24 }} />
+        <View style={{ height: 80 }} />
       </ScrollView>
+
+      {/* Continue Watching mini-player banner */}
+      {!hasActiveStream && history.length > 0 && (
+        <TouchableOpacity
+          testID="continue-watching-banner"
+          style={[styles.cwBanner, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          activeOpacity={0.85}
+          onPress={() => playChannel(history[0])}
+        >
+          <View style={styles.cwLeft}>
+            {history[0]?.stream_icon ? (
+              <Image source={{ uri: history[0].stream_icon }} style={styles.cwIcon} resizeMode="contain" />
+            ) : (
+              <View style={[styles.cwIconPlaceholder, { backgroundColor: colors.surfaceHighlight }]}>
+                <Ionicons name="tv" size={18} color={colors.textSecondary} />
+              </View>
+            )}
+            <View style={styles.cwTextWrap}>
+              <Text style={[styles.cwTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                {history[0]?.stream_name || history[0]?.name || 'Last Channel'}
+              </Text>
+              <Text style={[styles.cwSub, { color: colors.textSecondary }]}>Tap to resume watching</Text>
+            </View>
+          </View>
+          <View style={styles.cwPlayBtn}>
+            <Ionicons name="play" size={20} color="#fff" />
+          </View>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
