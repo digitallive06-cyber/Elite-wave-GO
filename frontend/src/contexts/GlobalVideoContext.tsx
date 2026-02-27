@@ -3,6 +3,7 @@ import { Video, ResizeMode } from 'expo-av';
 
 interface VideoState {
   streamUrl: string | null;
+  fallbackUrl: string | null;
   channelName: string;
   channelIcon: string;
   programTitle: string;
@@ -11,18 +12,21 @@ interface VideoState {
   isFullscreen: boolean;
   isPlaying: boolean;
   resizeModeIdx: number;
+  isTransitioning: boolean;
 }
 
 interface VideoContextType {
   videoRef: React.RefObject<Video>;
   state: VideoState;
-  playStream: (url: string, name: string, icon: string, programTitle: string, streamId: number, categoryId: string) => void;
+  playStream: (url: string, name: string, icon: string, programTitle: string, streamId: number, categoryId: string, fallbackUrl?: string) => void;
   stopStream: () => void;
   setFullscreen: (fs: boolean) => void;
   togglePlay: () => void;
   cycleResizeMode: () => void;
   setIsPlaying: (playing: boolean) => void;
   setProgramTitle: (title: string) => void;
+  setTransitioning: (t: boolean) => void;
+  tryFallbackUrl: () => void;
 }
 
 const VideoContext = createContext<VideoContextType | null>(null);
@@ -37,6 +41,7 @@ export const GlobalVideoProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const videoRef = useRef<Video>(null);
   const [state, setState] = useState<VideoState>({
     streamUrl: null,
+    fallbackUrl: null,
     channelName: '',
     channelIcon: '',
     programTitle: '',
@@ -45,18 +50,21 @@ export const GlobalVideoProvider: React.FC<{ children: React.ReactNode }> = ({ c
     isFullscreen: false,
     isPlaying: false,
     resizeModeIdx: 0,
+    isTransitioning: false,
   });
 
-  const playStream = useCallback((url: string, name: string, icon: string, programTitle: string = '', streamId: number = 0, categoryId: string = '') => {
+  const playStream = useCallback((url: string, name: string, icon: string, programTitle: string = '', streamId: number = 0, categoryId: string = '', fallbackUrl?: string) => {
     setState(prev => ({
       ...prev,
       streamUrl: url,
+      fallbackUrl: fallbackUrl || null,
       channelName: name,
       channelIcon: icon,
       programTitle,
       streamId,
       categoryId,
       isPlaying: true,
+      isTransitioning: true,
     }));
   }, []);
 
@@ -67,6 +75,7 @@ export const GlobalVideoProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setState(prev => ({
       ...prev,
       streamUrl: null,
+      fallbackUrl: null,
       channelName: '',
       channelIcon: '',
       programTitle: '',
@@ -74,6 +83,7 @@ export const GlobalVideoProvider: React.FC<{ children: React.ReactNode }> = ({ c
       categoryId: '',
       isFullscreen: false,
       isPlaying: false,
+      isTransitioning: false,
     }));
   }, []);
 
@@ -105,6 +115,19 @@ export const GlobalVideoProvider: React.FC<{ children: React.ReactNode }> = ({ c
     setState(prev => ({ ...prev, programTitle: title }));
   }, []);
 
+  const setTransitioning = useCallback((t: boolean) => {
+    setState(prev => ({ ...prev, isTransitioning: t }));
+  }, []);
+
+  const tryFallbackUrl = useCallback(() => {
+    setState(prev => {
+      if (prev.fallbackUrl && prev.fallbackUrl !== prev.streamUrl) {
+        return { ...prev, streamUrl: prev.fallbackUrl, fallbackUrl: null, isTransitioning: true };
+      }
+      return prev;
+    });
+  }, []);
+
   return (
     <VideoContext.Provider value={{
       videoRef,
@@ -116,6 +139,8 @@ export const GlobalVideoProvider: React.FC<{ children: React.ReactNode }> = ({ c
       cycleResizeMode,
       setIsPlaying,
       setProgramTitle,
+      setTransitioning,
+      tryFallbackUrl,
     }}>
       {children}
     </VideoContext.Provider>
