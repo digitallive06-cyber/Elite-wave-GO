@@ -300,7 +300,7 @@ async def get_stream_url(username: str, password: str, stream_id: int, stream_ty
         url = f"{XTREAM_DNS}/live/{username}/{password}/{stream_id}.m3u8"
         ts_url = url
 
-    # Resolve redirects for LB
+    # Resolve redirects for LB - try HEAD first, then GET
     resolved_url = url
     try:
         async with httpx.AsyncClient(timeout=10.0, verify=False, follow_redirects=False) as client_http:
@@ -309,13 +309,38 @@ async def get_stream_url(username: str, password: str, stream_id: int, stream_ty
                 redirect_url = response.headers.get("location", "")
                 if redirect_url:
                     resolved_url = redirect_url
+            elif response.status_code == 200:
+                # HEAD succeeded without redirect, try GET to catch LB that only redirect GET
+                try:
+                    response_get = await client_http.get(url, follow_redirects=False)
+                    if response_get.status_code in (301, 302, 303, 307, 308):
+                        redirect_url = response_get.headers.get("location", "")
+                        if redirect_url:
+                            resolved_url = redirect_url
+                except:
+                    pass
     except Exception as e:
         logger.warning(f"Could not resolve redirect: {e}")
 
+    # Also resolve TS URL redirect separately (LB may redirect differently per format)
+    resolved_ts_url = ts_url
+    if ts_url != url:
+        try:
+            async with httpx.AsyncClient(timeout=10.0, verify=False, follow_redirects=False) as client_http:
+                response = await client_http.head(ts_url)
+                if response.status_code in (301, 302, 303, 307, 308):
+                    redirect_url = response.headers.get("location", "")
+                    if redirect_url:
+                        resolved_ts_url = redirect_url
+        except:
+            pass
+
+    # Return multiple URL options for the player to try
     return {
         "url": resolved_url,
-        "fallback_url": ts_url,
+        "fallback_url": resolved_ts_url if resolved_ts_url != resolved_url else ts_url,
         "raw_url": url,
+        "ts_url": ts_url,
     }
 
 
