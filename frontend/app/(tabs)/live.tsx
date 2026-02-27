@@ -603,6 +603,10 @@ const styles = StyleSheet.create({
   emptyState: { margin: 16, padding: 40, borderRadius: 12, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 14 },
 
+  // TV Guide - back button
+  guideBackRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, gap: 4 },
+  guideBackText: { fontSize: 14, fontWeight: '600' },
+
   // TV Guide - channel selector
   channelSelectorList: { paddingHorizontal: 12, paddingVertical: 12, gap: 8 },
   channelSelectorCard: {
