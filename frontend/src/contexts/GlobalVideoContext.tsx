@@ -33,6 +33,8 @@ interface VideoContextType {
   nextChannel: () => void;
   prevChannel: () => void;
   streamList: any[];
+  liveGuideActive: boolean;
+  setLiveGuideActive: (active: boolean) => void;
 }
 
 const VideoContext = createContext<VideoContextType | null>(null);
@@ -46,6 +48,7 @@ export const useGlobalVideo = () => {
 export const GlobalVideoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const videoRef = useRef<Video>(null);
   const [streamList, setStreamListState] = useState<any[]>([]);
+  const [liveGuideActive, setLiveGuideActive] = useState(false);
   const [state, setState] = useState<VideoState>({
     streamUrl: null,
     fallbackUrl: null,
@@ -198,7 +201,7 @@ export const GlobalVideoProvider: React.FC<{ children: React.ReactNode }> = ({ c
       videoRef, state, playStream, stopStream, setFullscreen,
       togglePlay, cycleResizeMode, setIsPlaying, setProgramTitle,
       setTransitioning, tryFallbackUrl, setMuted, setStreamList,
-      nextChannel, prevChannel, streamList,
+      nextChannel, prevChannel, streamList, liveGuideActive, setLiveGuideActive,
     }}>
       {children}
     </VideoContext.Provider>
