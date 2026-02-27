@@ -11,16 +11,19 @@ import * as NavigationBar from 'expo-navigation-bar';
 import { useRouter, usePathname } from 'expo-router';
 import { useGlobalVideo } from '../contexts/GlobalVideoContext';
 import { useFavorites } from '../contexts/FavoritesContext';
+import { useAuth } from '../contexts/AuthContext';
+import { api } from '../utils/api';
 
 const RESIZE_MODES = [ResizeMode.CONTAIN, ResizeMode.COVER, ResizeMode.STRETCH];
 const RESIZE_LABELS = ['FIT', 'FILL', 'STRETCH'];
 
 export const GlobalVideoPlayer: React.FC = () => {
   const {
-    videoRef, state, stopStream, setFullscreen,
-    togglePlay, cycleResizeMode, setIsPlaying, setTransitioning, tryFallbackUrl,
+    videoRef, state, streamList, playStream, stopStream, setFullscreen,
+    togglePlay, cycleResizeMode, setIsPlaying, setTransitioning, tryFallbackUrl, setMuted,
   } = useGlobalVideo();
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { username, password } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const { width: screenW, height: screenH } = useWindowDimensions();
@@ -31,62 +34,61 @@ export const GlobalVideoPlayer: React.FC = () => {
   const transitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transitionOpacity = useRef(new Animated.Value(1)).current;
 
-  // Keep refs in sync with state
-  useEffect(() => { isFullscreenRef.current = state.isFullscreen; }, [state.isFullscreen]);
-  useEffect(() => { isTransitioningRef.current = state.isTransitioning; }, [state.isTransitioning]);
-
-  // Determine visibility: only show inline on Live tab
+  // Tab detection
   const isOnLiveTab = pathname?.includes('live') || false;
+  const isOnHomeTab = pathname === '/' || pathname === '/(tabs)' || pathname?.includes('home') || false;
   const hasStream = !!state.streamUrl;
   const isFS = state.isFullscreen;
-  const showInline = hasStream && !isFS && isOnLiveTab;
-  const showHidden = hasStream && !isFS && !isOnLiveTab;
+  const showPlayer = hasStream && (isOnLiveTab || isOnHomeTab) && !isFS;
+  const showHidden = hasStream && !isFS && !isOnLiveTab && !isOnHomeTab;
+
+  // Keep refs in sync
+  useEffect(() => { isFullscreenRef.current = isFS; }, [isFS]);
+  useEffect(() => { isTransitioningRef.current = state.isTransitioning; }, [state.isTransitioning]);
+
+  // Auto mute on Home, unmute on Live
+  useEffect(() => {
+    if (!hasStream) return;
+    if (isOnHomeTab && !isFS) {
+      setMuted(true);
+    } else if (isOnLiveTab || isFS) {
+      setMuted(false);
+    }
+  }, [isOnHomeTab, isOnLiveTab, isFS, hasStream, setMuted]);
 
   // --- Controls auto-hide ---
   const clearControlsTimer = useCallback(() => {
     if (controlsTimer.current) { clearTimeout(controlsTimer.current); controlsTimer.current = null; }
   }, []);
-
   const resetControlsTimer = useCallback(() => {
     clearControlsTimer();
     setShowControls(true);
     controlsTimer.current = setTimeout(() => setShowControls(false), 4000);
   }, [clearControlsTimer]);
-
   useEffect(() => {
-    if (isFS) { resetControlsTimer(); } else { setShowControls(true); clearControlsTimer(); }
+    if (isFS) resetControlsTimer(); else { setShowControls(true); clearControlsTimer(); }
     return clearControlsTimer;
   }, [isFS, resetControlsTimer, clearControlsTimer]);
 
-  // --- Channel transition overlay ---
+  // --- Transition overlay ---
   useEffect(() => {
     if (state.isTransitioning) {
       transitionOpacity.setValue(1);
-      // Safety timeout: force-dismiss after 3s even if playback status hasn't fired
       if (transitionTimer.current) clearTimeout(transitionTimer.current);
-      transitionTimer.current = setTimeout(() => {
-        if (isTransitioningRef.current) {
-          setTransitioning(false);
-        }
-      }, 3000);
+      transitionTimer.current = setTimeout(() => { if (isTransitioningRef.current) setTransitioning(false); }, 3000);
     }
     return () => { if (transitionTimer.current) clearTimeout(transitionTimer.current); };
   }, [state.isTransitioning, state.streamId, setTransitioning]);
-
-  // Fade out transition overlay
   useEffect(() => {
     if (!state.isTransitioning) {
       Animated.timing(transitionOpacity, { toValue: 0, duration: 400, useNativeDriver: true }).start();
     }
   }, [state.isTransitioning, transitionOpacity]);
 
-  // --- Orientation lock ---
+  // --- Orientation ---
   useEffect(() => {
     if (Platform.OS === 'web') return;
-    if (!hasStream) {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
-      return;
-    }
+    if (!hasStream) { ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {}); return; }
     if (isFS) {
       ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE)
         .then(() => { setTimeout(() => { if (isFullscreenRef.current) ScreenOrientation.unlockAsync().catch(() => {}); }, 500); })
@@ -120,19 +122,30 @@ export const GlobalVideoPlayer: React.FC = () => {
     return () => ScreenOrientation.removeOrientationChangeListener(sub);
   }, [hasStream, setFullscreen]);
 
-  // --- Playback status handler (uses refs to avoid stale closures) ---
+  // --- Playback status ---
   const handlePlaybackStatus = useCallback((status: any) => {
     if (status.isLoaded) {
       setIsPlaying(status.isPlaying);
-      if (status.isPlaying && isTransitioningRef.current) {
-        setTransitioning(false);
-      }
+      if (status.isPlaying && isTransitioningRef.current) setTransitioning(false);
     }
-    if (status.error) {
-      console.warn('Video error, trying fallback:', status.error);
-      tryFallbackUrl();
-    }
+    if (status.error) { console.warn('Video error:', status.error); tryFallbackUrl(); }
   }, [setIsPlaying, setTransitioning, tryFallbackUrl]);
+
+  // --- Channel up/down ---
+  const handleChangeChannel = useCallback(async (direction: 'next' | 'prev') => {
+    if (streamList.length === 0 || !state.streamId) return;
+    const idx = streamList.findIndex((s: any) => s.stream_id === state.streamId);
+    const newIdx = direction === 'next'
+      ? (idx + 1) % streamList.length
+      : (idx > 0 ? idx - 1 : streamList.length - 1);
+    const channel = streamList[newIdx];
+    if (!channel) return;
+    try {
+      const data = await api.getStreamUrl(username, password, channel.stream_id, 'live', 'ts');
+      playStream(data.url, channel.name, channel.stream_icon || '', '', channel.stream_id, channel.category_id || '', data.fallback_url || '');
+      resetControlsTimer();
+    } catch (e) { console.error('Channel change error:', e); }
+  }, [streamList, state.streamId, username, password, playStream, resetControlsTimer]);
 
   const handleFavToggle = useCallback(() => {
     if (!state.streamId) return;
@@ -146,19 +159,14 @@ export const GlobalVideoPlayer: React.FC = () => {
     }, 100);
   }, [setFullscreen, router, state]);
 
-  // Don't render anything if no stream
   if (!hasStream) return null;
 
-  // Container style: fullscreen, inline, or hidden (keeps Video mounted)
   const containerStyle = isFS
     ? [styles.fullscreenContainer, { width: screenW, height: screenH }]
-    : showInline
-      ? styles.inlineContainer
-      : styles.hiddenContainer;
+    : showPlayer ? styles.inlineContainer : styles.hiddenContainer;
 
   return (
     <View style={containerStyle}>
-      {/* Single persistent Video component - always in same tree position */}
       <Video
         ref={videoRef}
         testID="global-video-player"
@@ -166,20 +174,19 @@ export const GlobalVideoPlayer: React.FC = () => {
         style={styles.video}
         resizeMode={RESIZE_MODES[state.resizeModeIdx]}
         shouldPlay
+        isMuted={state.isMuted}
         useNativeControls={false}
         onPlaybackStatusUpdate={handlePlaybackStatus}
       />
 
-      {/* ====== CHANNEL TRANSITION OVERLAY ====== */}
-      {state.isTransitioning && (showInline || isFS) && (
+      {/* CHANNEL TRANSITION OVERLAY */}
+      {state.isTransitioning && (showPlayer || isFS) && (
         <Animated.View style={[styles.transitionOverlay, { opacity: transitionOpacity }]}>
           <View style={styles.transitionContent}>
             {state.channelIcon ? (
               <Image source={{ uri: state.channelIcon }} style={styles.transitionIcon} resizeMode="contain" />
             ) : (
-              <View style={styles.transitionIconPlaceholder}>
-                <Ionicons name="tv" size={40} color="#fff" />
-              </View>
+              <View style={styles.transitionIconPlaceholder}><Ionicons name="tv" size={40} color="#fff" /></View>
             )}
             <Text style={styles.transitionName}>{state.channelName}</Text>
             {state.programTitle ? <Text style={styles.transitionProgram}>{state.programTitle}</Text> : null}
@@ -187,8 +194,8 @@ export const GlobalVideoPlayer: React.FC = () => {
         </Animated.View>
       )}
 
-      {/* ====== INLINE CONTROLS ====== */}
-      {showInline && !state.isTransitioning && (
+      {/* INLINE CONTROLS */}
+      {showPlayer && !state.isTransitioning && (
         <View style={styles.inlineOverlay} pointerEvents="box-none">
           <LinearGradient colors={['rgba(0,0,0,0.7)', 'transparent']} style={styles.inlineTopGrad}>
             <View style={styles.inlineInfoRow}>
@@ -202,6 +209,11 @@ export const GlobalVideoPlayer: React.FC = () => {
           </LinearGradient>
           <LinearGradient colors={['transparent', 'rgba(0,0,0,0.7)']} style={styles.inlineBottomGrad}>
             <View style={styles.inlineControls}>
+              {isOnHomeTab && (
+                <TouchableOpacity style={styles.inlineBtn} onPress={() => { setMuted(!state.isMuted); }}>
+                  <Ionicons name={state.isMuted ? 'volume-mute' : 'volume-high'} size={18} color="#fff" />
+                </TouchableOpacity>
+              )}
               <TouchableOpacity testID="player-close-btn" style={styles.inlineBtn} onPress={stopStream}>
                 <Ionicons name="close" size={18} color="#fff" />
               </TouchableOpacity>
@@ -219,13 +231,12 @@ export const GlobalVideoPlayer: React.FC = () => {
         </View>
       )}
 
-      {/* ====== FULLSCREEN TUBI-STYLE CONTROLS ====== */}
+      {/* FULLSCREEN TUBI-STYLE */}
       {isFS && (
         <TouchableWithoutFeedback onPress={() => { showControls ? (setShowControls(false), clearControlsTimer()) : resetControlsTimer(); }}>
           <View style={StyleSheet.absoluteFill}>
             {showControls && (
               <View style={styles.fsOverlay}>
-                {/* TOP BAR */}
                 <LinearGradient colors={['rgba(0,0,0,0.85)', 'rgba(0,0,0,0.3)', 'transparent']} style={styles.fsTopBar}>
                   <TouchableOpacity testID="fs-back-btn" style={styles.fsBackBtn} onPress={() => setFullscreen(false)}>
                     <Ionicons name="chevron-back" size={28} color="#fff" />
@@ -239,18 +250,25 @@ export const GlobalVideoPlayer: React.FC = () => {
                   </TouchableOpacity>
                 </LinearGradient>
 
-                {/* RIGHT SIDE: Channel logo + up/down arrows */}
+                {/* Right side: channel logo + arrows */}
                 <View style={styles.fsRightSide} pointerEvents="box-none">
-                  <TouchableOpacity style={styles.fsRightArrow}><Ionicons name="chevron-up" size={28} color="rgba(255,255,255,0.7)" /></TouchableOpacity>
-                  {state.channelIcon ? (
-                    <Image source={{ uri: state.channelIcon }} style={styles.fsRightLogo} resizeMode="contain" />
-                  ) : null}
-                  <TouchableOpacity style={styles.fsRightArrow}><Ionicons name="chevron-down" size={28} color="rgba(255,255,255,0.7)" /></TouchableOpacity>
+                  <TouchableOpacity style={styles.fsRightArrow} onPress={() => handleChangeChannel('prev')}>
+                    <Ionicons name="chevron-up" size={28} color="rgba(255,255,255,0.8)" />
+                  </TouchableOpacity>
+                  {state.channelIcon ? <Image source={{ uri: state.channelIcon }} style={styles.fsRightLogo} resizeMode="contain" /> : null}
+                  <TouchableOpacity style={styles.fsRightArrow} onPress={() => handleChangeChannel('next')}>
+                    <Ionicons name="chevron-down" size={28} color="rgba(255,255,255,0.8)" />
+                  </TouchableOpacity>
                 </View>
 
-                {/* BOTTOM BAR: Tubi-style */}
+                {/* Center play/pause */}
+                <View style={styles.fsCenterRow} pointerEvents="box-none">
+                  <TouchableOpacity testID="fs-play-btn" style={styles.fsCenterBtn} onPress={() => { togglePlay(); resetControlsTimer(); }}>
+                    <Ionicons name={state.isPlaying ? 'pause' : 'play'} size={44} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+
                 <LinearGradient colors={['transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.85)']} style={styles.fsBottomBar}>
-                  {/* Channel name + program + LIVE badge */}
                   <View style={styles.fsBottomInfo}>
                     <Text style={styles.fsChannelName} numberOfLines={1}>{state.channelName}</Text>
                     {state.programTitle ? <Text style={styles.fsProgramTitle} numberOfLines={1}>{state.programTitle}</Text> : null}
@@ -259,7 +277,6 @@ export const GlobalVideoPlayer: React.FC = () => {
                       <Text style={styles.fsLiveText}>LIVE</Text>
                     </View>
                   </View>
-                  {/* Bottom icons row */}
                   <View style={styles.fsBottomIcons}>
                     <TouchableOpacity testID="fs-fav-btn" style={styles.fsBottomIconBtn} onPress={() => { handleFavToggle(); resetControlsTimer(); }}>
                       <Ionicons name={state.streamId && isFavorite(state.streamId) ? 'star' : 'star-outline'} size={22} color={state.streamId && isFavorite(state.streamId) ? '#FFD700' : '#fff'} />
@@ -286,16 +303,12 @@ const styles = StyleSheet.create({
   fullscreenContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000', zIndex: 99999, elevation: 99999 },
   hiddenContainer: { position: 'absolute', width: 1, height: 1, opacity: 0, overflow: 'hidden' },
   video: { width: '100%', height: '100%' },
-
-  /* Transition overlay */
   transitionOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', zIndex: 10 },
   transitionContent: { alignItems: 'center', gap: 10 },
   transitionIcon: { width: 72, height: 72, borderRadius: 14 },
   transitionIconPlaceholder: { width: 72, height: 72, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
   transitionName: { color: '#fff', fontSize: 18, fontWeight: '700', textAlign: 'center' },
   transitionProgram: { color: 'rgba(255,255,255,0.7)', fontSize: 13, textAlign: 'center' },
-
-  /* Inline overlay */
   inlineOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'space-between' },
   inlineTopGrad: { paddingTop: 8, paddingHorizontal: 12, paddingBottom: 16 },
   inlineInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -308,29 +321,21 @@ const styles = StyleSheet.create({
   inlineBottomGrad: { paddingBottom: 8, paddingHorizontal: 8, paddingTop: 16 },
   inlineControls: { flexDirection: 'row', justifyContent: 'flex-end', gap: 6 },
   inlineBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
-
-  /* Fullscreen overlay container */
   fsOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'space-between' },
-
-  /* FS Top bar */
   fsTopBar: { flexDirection: 'row', alignItems: 'center', paddingTop: Platform.OS === 'ios' ? 50 : 8, paddingHorizontal: 16, paddingBottom: 30, gap: 12 },
   fsBackBtn: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   fsTopIconBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.12)', justifyContent: 'center', alignItems: 'center' },
-
-  /* FS Right side channel navigation */
   fsRightSide: { position: 'absolute', right: 16, top: '30%', alignItems: 'center', gap: 12 },
-  fsRightArrow: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
+  fsRightArrow: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
   fsRightLogo: { width: 56, height: 56, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.3)' },
-
-  /* FS Bottom bar - Tubi style */
+  fsCenterRow: { alignItems: 'center', justifyContent: 'center' },
+  fsCenterBtn: { width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' },
   fsBottomBar: { paddingHorizontal: 20, paddingBottom: Platform.OS === 'ios' ? 36 : 12, paddingTop: 40 },
   fsBottomInfo: { marginBottom: 12 },
   fsChannelName: { color: '#fff', fontSize: 20, fontWeight: '800' },
   fsProgramTitle: { color: 'rgba(255,255,255,0.75)', fontSize: 14, fontWeight: '500', marginTop: 3 },
   fsLiveBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#E50914', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 4, gap: 4, alignSelf: 'flex-start', marginTop: 8 },
   fsLiveText: { color: '#fff', fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
-
-  /* FS Bottom icons row */
   fsBottomIcons: { flexDirection: 'row', alignItems: 'center', gap: 20 },
   fsBottomIconBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
   fsRatioLabel: { color: '#fff', fontSize: 12, fontWeight: '700', borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4, overflow: 'hidden' },
