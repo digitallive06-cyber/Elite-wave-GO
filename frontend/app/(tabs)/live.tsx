@@ -22,7 +22,7 @@ export default function LiveScreen() {
   const { colors } = useTheme();
   const { username, password } = useAuth();
   const { favorites, isFavorite, toggleFavorite } = useFavorites();
-  const { playStream, stopStream, state: videoState, setStreamList } = useGlobalVideo();
+  const { playStream, stopStream, state: videoState, setStreamList, setLiveGuideActive } = useGlobalVideo();
 
   // Active channel is tracked via global video state
   const activeStreamId = videoState.streamId;
