@@ -40,8 +40,10 @@ export const GlobalVideoPlayer: React.FC = () => {
   const isOnHomeTab = pathname === '/' || pathname === '/(tabs)' || pathname?.includes('home') || false;
   const hasStream = !!state.streamUrl;
   const isFS = state.isFullscreen;
-  const showPlayer = hasStream && (isOnLiveTab || isOnHomeTab) && !isFS;
-  const showHidden = hasStream && !isFS && !isOnLiveTab && !isOnHomeTab;
+  // Only show inline player on Live tab when user is in guide mode (selected a channel from list)
+  // Never show inline player on Home tab - the static hero card handles that
+  const showPlayer = hasStream && isOnLiveTab && liveGuideActive && !isFS;
+  const showHidden = hasStream && !isFS && !showPlayer;
 
   // Keep refs in sync
   useEffect(() => { isFullscreenRef.current = isFS; }, [isFS]);
