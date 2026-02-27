@@ -246,4 +246,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   logoutText: { fontSize: 16, fontWeight: '600' },
+  epgDesc: { fontSize: 13, marginBottom: 12, lineHeight: 18 },
+  radioRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingVertical: 10, paddingHorizontal: 8, borderRadius: 10, marginBottom: 4,
+  },
+  radioTextWrap: { flex: 1 },
+  radioLabel: { fontSize: 14, fontWeight: '600' },
+  radioSub: { fontSize: 12, marginTop: 2 },
+  forceUpdateBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    padding: 12, borderRadius: 10, gap: 8, borderWidth: 1, marginTop: 8,
+  },
+  forceUpdateText: { fontSize: 14, fontWeight: '600' },
+  epgLastUpdate: { fontSize: 11, textAlign: 'center', marginTop: 8 },
 });
