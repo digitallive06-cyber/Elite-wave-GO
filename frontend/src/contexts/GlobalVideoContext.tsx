@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useState, useRef, useCallback } from 'react';
-import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
+import { Video, ResizeMode } from 'expo-av';
 
 interface VideoState {
   streamUrl: string | null;
   channelName: string;
   channelIcon: string;
   programTitle: string;
+  streamId: number | null;
+  categoryId: string;
   isFullscreen: boolean;
   isPlaying: boolean;
   resizeModeIdx: number;
@@ -14,7 +16,7 @@ interface VideoState {
 interface VideoContextType {
   videoRef: React.RefObject<Video>;
   state: VideoState;
-  playStream: (url: string, name: string, icon: string, programTitle?: string) => void;
+  playStream: (url: string, name: string, icon: string, programTitle: string, streamId: number, categoryId: string) => void;
   stopStream: () => void;
   setFullscreen: (fs: boolean) => void;
   togglePlay: () => void;
@@ -38,18 +40,22 @@ export const GlobalVideoProvider: React.FC<{ children: React.ReactNode }> = ({ c
     channelName: '',
     channelIcon: '',
     programTitle: '',
+    streamId: null,
+    categoryId: '',
     isFullscreen: false,
     isPlaying: false,
     resizeModeIdx: 0,
   });
 
-  const playStream = useCallback((url: string, name: string, icon: string, programTitle: string = '') => {
+  const playStream = useCallback((url: string, name: string, icon: string, programTitle: string = '', streamId: number = 0, categoryId: string = '') => {
     setState(prev => ({
       ...prev,
       streamUrl: url,
       channelName: name,
       channelIcon: icon,
       programTitle,
+      streamId,
+      categoryId,
       isPlaying: true,
     }));
   }, []);
@@ -64,6 +70,8 @@ export const GlobalVideoProvider: React.FC<{ children: React.ReactNode }> = ({ c
       channelName: '',
       channelIcon: '',
       programTitle: '',
+      streamId: null,
+      categoryId: '',
       isFullscreen: false,
       isPlaying: false,
     }));
@@ -75,12 +83,15 @@ export const GlobalVideoProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const togglePlay = useCallback(async () => {
     if (!videoRef.current) return;
-    if (state.isPlaying) {
-      await videoRef.current.pauseAsync();
-    } else {
-      await videoRef.current.playAsync();
-    }
-  }, [state.isPlaying]);
+    try {
+      const status = await videoRef.current.getStatusAsync();
+      if (status.isLoaded && status.isPlaying) {
+        await videoRef.current.pauseAsync();
+      } else {
+        await videoRef.current.playAsync();
+      }
+    } catch {}
+  }, []);
 
   const cycleResizeMode = useCallback(() => {
     setState(prev => ({ ...prev, resizeModeIdx: (prev.resizeModeIdx + 1) % 3 }));
