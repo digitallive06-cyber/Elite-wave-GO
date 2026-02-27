@@ -1,9 +1,11 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Image,
-  FlatList, ActivityIndicator, Dimensions, RefreshControl,
+  FlatList, ActivityIndicator, Dimensions, RefreshControl, Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Video, ResizeMode } from 'expo-av';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/contexts/ThemeContext';
@@ -21,12 +23,23 @@ export default function HomeScreen() {
   const { favorites, loadServerFavorites } = useFavorites();
   const { playStream, state: videoState, setFullscreen, setStreamList } = useGlobalVideo();
   const router = useRouter();
+  const heroVideoRef = useRef<Video>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [heroStream, setHeroStream] = useState<any>(null);
+  const [heroVideoUrl, setHeroVideoUrl] = useState<string | null>(null);
   const [recentMovies, setRecentMovies] = useState<any[]>([]);
   const [recentSeries, setRecentSeries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Lock Home screen to portrait
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+    return () => {
+      ScreenOrientation.unlockAsync().catch(() => {});
+    };
+  }, []);
 
   const loadData = useCallback(async () => {
     if (!username || !password) return;
@@ -55,14 +68,29 @@ export default function HomeScreen() {
 
   useEffect(() => { if (username && password) loadData(); }, [username, password, loadData]);
 
-  // Play hero channel -> start stream and go fullscreen
+  // Fetch hero stream URL for auto-play preview
+  useEffect(() => {
+    if (!heroStream || !username || !password) return;
+    (async () => {
+      try {
+        const data = await api.getStreamUrl(username, password, heroStream.stream_id, 'live', 'ts');
+        setHeroVideoUrl(data.url);
+      } catch (e) { console.error('Hero URL error:', e); }
+    })();
+  }, [heroStream, username, password]);
+
+  // Play hero channel -> stop preview, start global player, go fullscreen
   const playHeroFullscreen = async () => {
     if (!heroStream) return;
     try {
-      const urlData = await api.getStreamUrl(username, password, heroStream.stream_id, heroStream.stream_type || 'live', 'ts');
-      playStream(urlData.url, heroStream.stream_name || heroStream.name || '', heroStream.stream_icon || '', '', heroStream.stream_id, heroStream.category_id || '', urlData.fallback_url || '');
+      // Stop local preview
+      if (heroVideoRef.current) {
+        await heroVideoRef.current.stopAsync().catch(() => {});
+      }
+      const url = heroVideoUrl || (await api.getStreamUrl(username, password, heroStream.stream_id, 'live', 'ts')).url;
+      playStream(url, heroStream.stream_name || heroStream.name || '', heroStream.stream_icon || '', '', heroStream.stream_id, heroStream.category_id || '', '');
       setFullscreen(true);
-      // Ensure stream list is loaded for channel up/down
+      // Load stream list for channel navigation
       api.getLiveStreams(username, password).then(streams => {
         if (Array.isArray(streams)) setStreamList(streams);
       }).catch(() => {});
@@ -78,6 +106,8 @@ export default function HomeScreen() {
     } catch (e) { console.error('Play error:', e); }
   };
 
+  // Show hero video preview only when no global stream is active
+  const showHeroVideo = !!heroVideoUrl && !videoState.streamUrl;
   const hasActiveStream = !!videoState.streamUrl;
 
   if (loading) {
@@ -101,7 +131,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Hero Card - always shown as static preview */}
+        {/* Hero Card with auto-play video preview */}
         {heroStream && (
           <TouchableOpacity
             testID="hero-card"
@@ -109,7 +139,18 @@ export default function HomeScreen() {
             activeOpacity={0.85}
             onPress={playHeroFullscreen}
           >
-            {heroStream.stream_icon ? (
+            {/* Video preview - plays muted when no global stream is active */}
+            {showHeroVideo ? (
+              <Video
+                ref={heroVideoRef}
+                source={{ uri: heroVideoUrl }}
+                style={styles.heroVideo}
+                resizeMode={ResizeMode.COVER}
+                shouldPlay={showHeroVideo}
+                isMuted
+                isLooping={false}
+              />
+            ) : heroStream.stream_icon ? (
               <Image source={{ uri: heroStream.stream_icon }} style={styles.heroImage} resizeMode="cover" />
             ) : (
               <View style={[styles.heroImagePlaceholder, { backgroundColor: colors.surfaceHighlight }]}>
@@ -270,8 +311,9 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
   headerTitle: { fontSize: 24, fontWeight: '800' },
 
-  // Hero card - large image-based design matching the correct screenshot
+  // Hero card with video preview
   heroCard: { marginHorizontal: 16, borderRadius: 16, overflow: 'hidden', marginBottom: 24, height: 220, position: 'relative' },
+  heroVideo: { width: '100%', height: '100%' },
   heroImage: { width: '100%', height: '100%' },
   heroImagePlaceholder: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
   heroGradient: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 16, paddingBottom: 16, paddingTop: 60 },
