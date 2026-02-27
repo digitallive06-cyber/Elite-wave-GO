@@ -302,6 +302,7 @@ export const GlobalVideoPlayer: React.FC = () => {
 
 const styles = StyleSheet.create({
   inlineContainer: { width: '100%', aspectRatio: 16 / 9, maxHeight: 240, backgroundColor: '#000', position: 'relative' },
+  homeInlineContainer: { marginHorizontal: 16, aspectRatio: 16 / 9, maxHeight: 240, backgroundColor: '#000', position: 'relative', borderRadius: 16, overflow: 'hidden', marginTop: 8, marginBottom: 8 },
   fullscreenContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000', zIndex: 99999, elevation: 99999 },
   hiddenContainer: { position: 'absolute', width: 1, height: 1, opacity: 0, overflow: 'hidden' },
   video: { width: '100%', height: '100%' },
