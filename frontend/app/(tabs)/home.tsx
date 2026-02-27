@@ -55,22 +55,6 @@ export default function HomeScreen() {
 
   useEffect(() => { if (username && password) loadData(); }, [username, password, loadData]);
 
-  // Auto-play hero channel muted on first load
-  useEffect(() => {
-    if (!heroStream || autoPlayedRef.current || !username || !password || videoState.streamUrl) return;
-    autoPlayedRef.current = true;
-    const timer = setTimeout(async () => {
-      try {
-        const urlData = await api.getStreamUrl(username, password, heroStream.stream_id, heroStream.stream_type || 'live', 'ts');
-        playStream(urlData.url, heroStream.stream_name || heroStream.name || '', heroStream.stream_icon || '', '', heroStream.stream_id, heroStream.category_id || '', urlData.fallback_url || '');
-        // Load stream list for channel navigation in fullscreen
-        const streams = await api.getLiveStreams(username, password);
-        if (Array.isArray(streams)) setStreamList(streams);
-      } catch (e) { console.error('Auto-play error:', e); }
-    }, 800);
-    return () => clearTimeout(timer);
-  }, [heroStream, username, password, videoState.streamUrl]);
-
   // Play hero channel -> start stream and go fullscreen
   const playHeroFullscreen = async () => {
     if (!heroStream) return;
