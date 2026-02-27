@@ -165,7 +165,7 @@ export const GlobalVideoPlayer: React.FC = () => {
   const containerStyle = isFS
     ? [styles.fullscreenContainer, { width: screenW, height: screenH }]
     : showPlayer
-      ? (isOnHomeTab ? styles.homeInlineContainer : styles.inlineContainer)
+      ? styles.inlineContainer
       : styles.hiddenContainer;
 
   return (
@@ -176,7 +176,7 @@ export const GlobalVideoPlayer: React.FC = () => {
         source={{ uri: state.streamUrl }}
         style={styles.video}
         resizeMode={RESIZE_MODES[state.resizeModeIdx]}
-        shouldPlay
+        shouldPlay={isFS || showPlayer}
         isMuted={state.isMuted}
         useNativeControls={false}
         onPlaybackStatusUpdate={handlePlaybackStatus}
