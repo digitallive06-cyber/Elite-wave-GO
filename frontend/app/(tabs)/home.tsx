@@ -6,6 +6,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Video, ResizeMode } from 'expo-av';
 import * as ScreenOrientation from 'expo-screen-orientation';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/contexts/ThemeContext';
@@ -22,7 +23,7 @@ export default function HomeScreen() {
   const { colors } = useTheme();
   const { username, password } = useAuth();
   const { favorites, loadServerFavorites } = useFavorites();
-  const { playStream, state: videoState, setFullscreen, setStreamList } = useGlobalVideo();
+  const { playStream, stopStream, state: videoState, setFullscreen, setStreamList } = useGlobalVideo();
   const router = useRouter();
   const heroVideoRef = useRef<Video>(null);
   const [history, setHistory] = useState<any[]>([]);
