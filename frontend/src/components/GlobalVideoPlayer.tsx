@@ -160,11 +160,19 @@ export const GlobalVideoPlayer: React.FC = () => {
   }, [state.streamId, state.channelName, state.channelIcon, state.categoryId, toggleFavorite]);
 
   const handleMultiview = useCallback(() => {
+    const mvParams = {
+      streamId: String(state.streamId || ''),
+      streamName: state.channelName,
+      streamIcon: state.channelIcon,
+      categoryId: state.categoryId,
+      directUrl: state.streamUrl || '',
+    };
     setFullscreen(false);
+    stopStream();
     setTimeout(() => {
-      router.push({ pathname: '/multiview', params: { streamId: String(state.streamId || ''), streamName: state.channelName, streamIcon: state.channelIcon, categoryId: state.categoryId, directUrl: state.streamUrl || '' } });
+      router.push({ pathname: '/multiview', params: mvParams });
     }, 100);
-  }, [setFullscreen, router, state]);
+  }, [setFullscreen, stopStream, router, state]);
 
   if (!hasStream) return null;
 
