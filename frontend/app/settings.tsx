@@ -128,6 +128,48 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* EPG Settings */}
+        <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>EPG (TV GUIDE)</Text>
+          <Text style={[styles.epgDesc, { color: colors.textSecondary }]}>Choose when the EPG data auto-updates</Text>
+          <TouchableOpacity
+            testID="epg-startup-btn"
+            style={[styles.radioRow, epgMode === 'startup' && { backgroundColor: colors.primary + '15' }]}
+            onPress={() => changeEpgMode('startup')}
+          >
+            <Ionicons name={epgMode === 'startup' ? 'radio-button-on' : 'radio-button-off'} size={20} color={epgMode === 'startup' ? colors.primary : colors.textSecondary} />
+            <View style={styles.radioTextWrap}>
+              <Text style={[styles.radioLabel, { color: colors.textPrimary }]}>At Startup</Text>
+              <Text style={[styles.radioSub, { color: colors.textSecondary }]}>Update EPG every time the app starts</Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            testID="epg-daily-btn"
+            style={[styles.radioRow, epgMode === 'daily' && { backgroundColor: colors.primary + '15' }]}
+            onPress={() => changeEpgMode('daily')}
+          >
+            <Ionicons name={epgMode === 'daily' ? 'radio-button-on' : 'radio-button-off'} size={20} color={epgMode === 'daily' ? colors.primary : colors.textSecondary} />
+            <View style={styles.radioTextWrap}>
+              <Text style={[styles.radioLabel, { color: colors.textPrimary }]}>Once a Day</Text>
+              <Text style={[styles.radioSub, { color: colors.textSecondary }]}>Update EPG once every 24 hours</Text>
+            </View>
+          </TouchableOpacity>
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <TouchableOpacity
+            testID="epg-force-btn"
+            style={[styles.forceUpdateBtn, { backgroundColor: colors.primary + '15', borderColor: colors.primary + '30' }]}
+            onPress={forceEpgUpdate}
+          >
+            <Ionicons name="refresh" size={18} color={colors.primary} />
+            <Text style={[styles.forceUpdateText, { color: colors.primary }]}>Force Update</Text>
+          </TouchableOpacity>
+          {epgLastUpdate && (
+            <Text style={[styles.epgLastUpdate, { color: colors.textSecondary }]}>
+              Last updated: {new Date(epgLastUpdate).toLocaleString()}
+            </Text>
+          )}
+        </View>
+
         {/* About */}
         <View style={[styles.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>ABOUT</Text>
