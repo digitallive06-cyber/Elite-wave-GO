@@ -23,6 +23,18 @@ Build an IPTV mobile application for Android (APK) using the Xtream Codes API, c
 
 ## What's Been Implemented
 
+### Feb 27, 2026 - Session 3 (Current)
+**P0 Bug Fixes - UI Regressions:**
+- Fixed Home screen hero card: Redesigned as large image-based card with `LinearGradient` overlay, LIVE badge, channel name/category, blue play button matching the correct "before" screenshots
+- Fixed Live TV navigation: Added `showGuide` local state to always show channel list first when entering the Live tab, TV guide only shows after explicit channel selection from the list
+- Added "Back to channels" button in TV guide header for easy navigation back to channel list
+- Added auto-reset of guide view when stream stops
+
+**P1 Fixes:**
+- Auto-play hero channel muted on Home screen load (with autoPlayedRef to prevent re-triggers)
+- Fixed channel up/down controls by populating `streamList` when playing from Home screen (both auto-play and hero play button load the stream list)
+- Home inline player now has rounded corners and margins matching the screenshot design (`homeInlineContainer` style)
+
 ### Feb 27, 2026 - Session 2
 **Bug Fixes:**
 - Fixed transition overlay stuck (was never fading out) - used useRef for state tracking + 3s timeout fallback
@@ -56,18 +68,26 @@ Build an IPTV mobile application for Android (APK) using the Xtream Codes API, c
 - Build 19216709: SDK 54, initial global player + features
 - Build bcb45e92: SDK 54, cancelled (pre-features)
 
+## Key Files
+- `frontend/app/(tabs)/home.tsx` - Home screen with hero card, auto-play, sections
+- `frontend/app/(tabs)/live.tsx` - Live TV with channel list + TV guide views
+- `frontend/src/components/GlobalVideoPlayer.tsx` - Singleton video player
+- `frontend/src/contexts/GlobalVideoContext.tsx` - Player state management
+- `frontend/src/contexts/FavoritesContext.tsx` - Favorites management
+- `backend/server.py` - FastAPI backend proxy
+
 ## Prioritized Backlog
 
 ### P1 (High)
 - Multiview screen implementation (4-channel grid)
-- Channel up/down navigation (wire the arrows to change channels)
 - VOD/Series content screens
+- Load Balancer stream playback verification
 
 ### P2 (Medium)
 - Settings screen
 - Global search
 - Catch-up TV
-- Channel changing in fullscreen without exiting
+- EPG data display improvements ("what's on now/next")
 
 ### P3 (Low)
 - PiP mode
