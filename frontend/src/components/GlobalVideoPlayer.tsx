@@ -127,7 +127,7 @@ export const GlobalVideoPlayer: React.FC = () => {
       else if (portrait && isFullscreenRef.current) setFullscreen(false);
     });
     return () => ScreenOrientation.removeOrientationChangeListener(sub);
-  }, [hasStream, setFullscreen]);
+  }, [hasStream, setFullscreen, isOnLiveTab]);
 
   // --- Playback status ---
   const handlePlaybackStatus = useCallback((status: any) => {
