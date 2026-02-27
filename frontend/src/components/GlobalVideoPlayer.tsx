@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TouchableWithoutFeedback,
-  Platform, BackHandler, useWindowDimensions, Image, Animated,
+  Platform, BackHandler, useWindowDimensions, Image, Animated, StatusBar,
 } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -302,8 +302,7 @@ export const GlobalVideoPlayer: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  inlineContainer: { width: '100%', aspectRatio: 16 / 9, maxHeight: 240, backgroundColor: '#000', position: 'relative' },
-  homeInlineContainer: { marginHorizontal: 16, aspectRatio: 16 / 9, maxHeight: 240, backgroundColor: '#000', position: 'relative', borderRadius: 16, overflow: 'hidden', marginTop: 8, marginBottom: 8 },
+  inlineContainer: { width: '100%', aspectRatio: 16 / 9, maxHeight: 240, backgroundColor: '#000', position: 'relative', marginTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0 },
   fullscreenContainer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: '#000', zIndex: 99999, elevation: 99999 },
   hiddenContainer: { position: 'absolute', width: 1, height: 1, opacity: 0, overflow: 'hidden' },
   video: { width: '100%', height: '100%' },
