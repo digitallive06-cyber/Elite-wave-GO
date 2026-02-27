@@ -521,7 +521,7 @@ export default function LiveScreen() {
           )}
         </>
       ) : (
-        /* TV GUIDE VIEW (channel active) */
+        /* TV GUIDE VIEW (after selecting a channel from the list) */
         loadingStreams ? (
           <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
         ) : (
