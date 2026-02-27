@@ -7,7 +7,7 @@ import requests
 import os
 
 # Use public backend URL
-BASE_URL = "https://wavenetwork-build.preview.emergentagent.com"
+BASE_URL = "https://channel-hub-android.preview.emergentagent.com"
 
 # Xtream credentials
 USERNAME = "DJBIGANT"

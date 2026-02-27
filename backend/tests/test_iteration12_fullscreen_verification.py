@@ -14,7 +14,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://wavenetwork-build.preview.emergentagent.com')
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://channel-hub-android.preview.emergentagent.com')
 
 # Test credentials
 TEST_USERNAME = "DJBIGANT"

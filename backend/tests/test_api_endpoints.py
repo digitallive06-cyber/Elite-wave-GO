@@ -10,7 +10,7 @@ if frontend_env.exists():
     load_dotenv(frontend_env)
 
 # Test backend health and auth endpoints
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://wavenetwork-build.preview.emergentagent.com')
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://channel-hub-android.preview.emergentagent.com')
 
 class TestHealthEndpoint:
     """Health check endpoint tests"""

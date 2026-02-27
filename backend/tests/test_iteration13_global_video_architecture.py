@@ -12,7 +12,7 @@ import requests
 import os
 
 # Use the public URL from env
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://wavenetwork-build.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://channel-hub-android.preview.emergentagent.com').rstrip('/')
 
 
 class TestHealthEndpoint:
