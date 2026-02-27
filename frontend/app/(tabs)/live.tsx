@@ -193,6 +193,7 @@ export default function LiveScreen() {
       setSelectedDateStr(getDateStr(new Date()));
       loadFullEpg(item.stream_id);
       setShowGuide(true);
+      setLiveGuideActive(true);
     } catch (e) { console.error('Error playing channel:', e); }
   };
 
@@ -200,6 +201,7 @@ export default function LiveScreen() {
   useEffect(() => {
     if (showGuide && !activeStreamId) {
       setShowGuide(false);
+      setLiveGuideActive(false);
     }
   }, [showGuide, activeStreamId]);
 
