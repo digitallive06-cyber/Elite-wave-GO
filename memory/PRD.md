@@ -6,58 +6,70 @@ Build an IPTV mobile application for Android (APK) using the Xtream Codes API, c
 ## Core Requirements
 - **API**: Xtream Codes API via backend proxy
 - **Content**: Live Channels, VOD, TV Series, Catch-up, EPG with channel logos
-- **Login**: Username/password with Elite Wave logo
+- **Login**: Username/password with Elite Wave logo, NO splash screen
 - **Favorites**: Mark channels, dedicated sections
-- **Live TV**: Inline hero preview → seamless fullscreen on rotation
-- **Player**: Screen ratio adjustments (FIT/FILL/STRETCH), Tubi-style UI
-- **Multiview**: 4-channel grid view
-- **Home**: Locked to portrait
+- **Live TV**: Inline hero preview, seamless fullscreen on landscape rotation, portrait rotation exits fullscreen
+- **Player**: Tubi-style UI with gradient overlays, large center controls, channel up/down arrows, LIVE badge
+- **Screen Ratio**: FIT/FILL/STRETCH toggle
+- **Multiview**: 4-channel grid view (accessible from fullscreen controls)
+- **Channel Transition**: Show channel icon with 50% transparent background on change
+- **Home**: Locked to portrait, player hidden when navigating away from Live tab
 
 ## Architecture
-- **Frontend**: Expo (React Native) with file-based routing
+- **Frontend**: Expo SDK 54 (React Native) with file-based routing
 - **Backend**: FastAPI proxy for Xtream Codes API + MongoDB
-- **Video**: Global singleton pattern - single persistent `<Video>` component at app root via `GlobalVideoContext` + `GlobalVideoPlayer`
-- **Build**: EAS Build targeting Expo SDK 54, Android APK
+- **Video**: Global singleton pattern - single persistent `<Video>` component at app root
+- **Build**: EAS Build, Android APK
 
 ## What's Been Implemented
-### Feb 27, 2026
-- **Global Video Player Architecture** (COMPLETE)
-  - `GlobalVideoContext.tsx`: Full state management (streamUrl, fallbackUrl, channelName, channelIcon, programTitle, streamId, categoryId, isFullscreen, isPlaying, resizeModeIdx, isTransitioning)
-  - `GlobalVideoPlayer.tsx`: Single persistent Video component with Tubi-style UI, gradient overlays, channel transition overlay, inline + fullscreen modes
-  - `_layout.tsx`: Root layout positions player above Stack, hides navigation during fullscreen
-  - `live.tsx`: Complete rewrite - no local video, uses global context
-- **Portrait Rotation Exit** - Unlocks orientation after entering fullscreen so rotating to portrait exits fullscreen
-- **Tubi-Style Player UI** - Gradient overlays, large center play/pause, LIVE badge, multiview/resize/fav/exit controls
-- **Channel Change Overlay** - Shows channel icon + name with 50% transparent background during transitions
-- **LB Stream Support** - `expo-build-properties` with `usesCleartextTraffic: true`, improved backend redirect resolution, fallback URL system
-- **Splash Screen Removed** - Direct to login page
-- **App Icon** - Uses Elite Wave logo
-- **EAS Build** - APK built and downloadable
+
+### Feb 27, 2026 - Session 2
+**Bug Fixes:**
+- Fixed transition overlay stuck (was never fading out) - used useRef for state tracking + 3s timeout fallback
+- Fixed fullscreen controls not reappearing on touch - replaced TouchableOpacity with TouchableWithoutFeedback + explicit View child
+- Fixed player stuck on Home/other tabs - uses usePathname() to only show inline on Live tab; hidden but mounted on other tabs
+- Fixed LB stream resolution - backend now tries GET after HEAD (LB only redirects GET with 302)
+- Fixed dependency versions for Expo SDK 54 compatibility
+
+**Tubi-Style Player Redesign:**
+- Top: back arrow, resize icon, fullscreen exit icon
+- Right side: up/down channel arrows + channel logo
+- Bottom-left: channel name (bold), program title, LIVE badge (red with lightning icon)
+- Bottom icons: favorite star, ratio label (FIT/FILL/STRETCH), multiview grid
+
+### Feb 27, 2026 - Session 1
+- Global Video Player architecture (GlobalVideoContext + GlobalVideoPlayer)
+- Complete live.tsx rewrite removing all local video logic
+- Portrait rotation exits fullscreen
+- Channel change overlay with fade animation
+- LB/raw IP support (usesCleartextTraffic)
+- Splash screen removed, app icon updated
+- Backend improved redirect resolution with fallback URLs
 
 ### Previous Sessions
-- Login screen with Elite Wave logo
-- Backend proxy for Xtream Codes API
-- Live TV with categories, EPG, search, favorites
+- Login, backend proxy, Live TV categories/EPG/search/favorites
 - Home, VOD, Series, Catch-Up tab scaffolding
 - Watch history tracking
 
-## Prioritized Backlog
+## APK Build History
+- Build 311f12ee: SDK 54, all bug fixes + Tubi-style player
+- Build 19216709: SDK 54, initial global player + features
+- Build bcb45e92: SDK 54, cancelled (pre-features)
 
-### P0 (Critical)
-- None currently
+## Prioritized Backlog
 
 ### P1 (High)
 - Multiview screen implementation (4-channel grid)
-- VOD/Series content screens (flesh out)
-- Test LB stream playback on device
+- Channel up/down navigation (wire the arrows to change channels)
+- VOD/Series content screens
 
 ### P2 (Medium)
 - Settings screen
-- Global search feature
-- Catch-up TV functionality
+- Global search
+- Catch-up TV
 - Channel changing in fullscreen without exiting
 
 ### P3 (Low)
-- Offline favorites caching
-- Picture-in-picture mode
+- PiP mode
+- Offline favorites
 - Parental controls
