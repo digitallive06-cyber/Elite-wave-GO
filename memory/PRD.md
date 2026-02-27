@@ -25,51 +25,35 @@ Build an IPTV mobile application for Android (APK) using the Xtream Codes API, c
 
 ### Feb 27, 2026 - Session 3 (Current)
 **P0 Bug Fixes - UI Regressions:**
-- Fixed Home screen hero card: Redesigned as large image-based card with `LinearGradient` overlay, LIVE badge, channel name/category, blue play button matching the correct "before" screenshots
-- Fixed Live TV navigation: Added `showGuide` local state to always show channel list first when entering the Live tab, TV guide only shows after explicit channel selection from the list
-- Added "Back to channels" button in TV guide header for easy navigation back to channel list
-- Added auto-reset of guide view when stream stops
+- Fixed Home screen hero card: Redesigned as large image-based card with `LinearGradient` overlay, LIVE badge, channel name/category, blue play button
+- Fixed Live TV navigation: Added `showGuide` local state - always shows channel list first, TV guide only after channel selection
+- Added "Back to channels" button in TV guide header
 
 **P1 Fixes:**
-- Auto-play hero channel muted on Home screen load (with autoPlayedRef to prevent re-triggers)
-- Fixed channel up/down controls by populating `streamList` when playing from Home screen (both auto-play and hero play button load the stream list)
-- Home inline player now has rounded corners and margins matching the screenshot design (`homeInlineContainer` style)
+- Auto-play hero channel muted on Home screen load
+- Fixed channel up/down by populating `streamList` from Home screen
+- Home inline player has rounded corners and margins (`homeInlineContainer` style)
 
-### Feb 27, 2026 - Session 2
-**Bug Fixes:**
-- Fixed transition overlay stuck (was never fading out) - used useRef for state tracking + 3s timeout fallback
-- Fixed fullscreen controls not reappearing on touch - replaced TouchableOpacity with TouchableWithoutFeedback + explicit View child
-- Fixed player stuck on Home/other tabs - uses usePathname() to only show inline on Live tab; hidden but mounted on other tabs
-- Fixed LB stream resolution - backend now tries GET after HEAD (LB only redirects GET with 302)
-- Fixed dependency versions for Expo SDK 54 compatibility
-
-**Tubi-Style Player Redesign:**
-- Top: back arrow, resize icon, fullscreen exit icon
-- Right side: up/down channel arrows + channel logo
-- Bottom-left: channel name (bold), program title, LIVE badge (red with lightning icon)
-- Bottom icons: favorite star, ratio label (FIT/FILL/STRETCH), multiview grid
-
-### Feb 27, 2026 - Session 1
-- Global Video Player architecture (GlobalVideoContext + GlobalVideoPlayer)
-- Complete live.tsx rewrite removing all local video logic
-- Portrait rotation exits fullscreen
-- Channel change overlay with fade animation
-- LB/raw IP support (usesCleartextTraffic)
-- Splash screen removed, app icon updated
-- Backend improved redirect resolution with fallback URLs
+**New Feature:**
+- "Continue Watching" mini-player banner on Home screen - floating bar showing last watched channel with resume button
 
 ### Previous Sessions
-- Login, backend proxy, Live TV categories/EPG/search/favorites
-- Home, VOD, Series, Catch-Up tab scaffolding
-- Watch history tracking
+- Global Video Player architecture (GlobalVideoContext + GlobalVideoPlayer singleton)
+- Complete Tubi-style player redesign with fullscreen controls
+- Backend proxy for Xtream Codes API
+- Login, Live TV categories/EPG/search/favorites
+- Watch history tracking, favorites sync
+- Portrait rotation exits fullscreen, landscape enters fullscreen
+- Channel change overlay with fade animation
+- LB/raw IP support (usesCleartextTraffic)
 
 ## APK Build History
-- Build 311f12ee: SDK 54, all bug fixes + Tubi-style player
+- Build 8ccb5220 (Feb 27 Session 3): All regression fixes + continue watching banner
+- Build 311f12ee: SDK 54, bug fixes + Tubi-style player
 - Build 19216709: SDK 54, initial global player + features
-- Build bcb45e92: SDK 54, cancelled (pre-features)
 
 ## Key Files
-- `frontend/app/(tabs)/home.tsx` - Home screen with hero card, auto-play, sections
+- `frontend/app/(tabs)/home.tsx` - Home screen with hero card, auto-play, continue watching banner
 - `frontend/app/(tabs)/live.tsx` - Live TV with channel list + TV guide views
 - `frontend/src/components/GlobalVideoPlayer.tsx` - Singleton video player
 - `frontend/src/contexts/GlobalVideoContext.tsx` - Player state management
