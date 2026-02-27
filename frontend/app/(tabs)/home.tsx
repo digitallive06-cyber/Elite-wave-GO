@@ -319,4 +319,19 @@ const styles = StyleSheet.create({
   posterPHText: { fontSize: 11, textAlign: 'center', marginTop: 4 },
   emptyRow: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 20, borderRadius: 12 },
   emptyText: { fontSize: 14 },
+
+  // Continue Watching banner
+  cwBanner: {
+    position: 'absolute', bottom: 0, left: 16, right: 16,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderRadius: 14, borderWidth: 1, padding: 12, paddingRight: 14,
+    shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 10,
+  },
+  cwLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 10 },
+  cwIcon: { width: 40, height: 40, borderRadius: 8 },
+  cwIconPlaceholder: { width: 40, height: 40, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  cwTextWrap: { flex: 1 },
+  cwTitle: { fontSize: 14, fontWeight: '700' },
+  cwSub: { fontSize: 11, marginTop: 2 },
+  cwPlayBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#00B4D8', justifyContent: 'center', alignItems: 'center', marginLeft: 8 },
 });
