@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Image,
-  FlatList, ActivityIndicator, Dimensions, RefreshControl, Platform,
+  FlatList, ActivityIndicator, Dimensions, RefreshControl, Platform, StatusBar,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Video, ResizeMode } from 'expo-av';
@@ -16,6 +16,7 @@ import { api } from '../../src/utils/api';
 
 const { width } = Dimensions.get('window');
 const MOVIE_CARD_WIDTH = (width - 48 - 24) / 2.5;
+const STATUS_BAR_H = Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0;
 
 export default function HomeScreen() {
   const { colors } = useTheme();
@@ -36,9 +37,7 @@ export default function HomeScreen() {
   useEffect(() => {
     if (Platform.OS === 'web') return;
     ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
-    return () => {
-      ScreenOrientation.unlockAsync().catch(() => {});
-    };
+    return () => { ScreenOrientation.unlockAsync().catch(() => {}); };
   }, []);
 
   const loadData = useCallback(async () => {
@@ -68,29 +67,31 @@ export default function HomeScreen() {
 
   useEffect(() => { if (username && password) loadData(); }, [username, password, loadData]);
 
-  // Fetch hero stream URL for auto-play preview
+  // Fetch hero stream URL for auto-play preview - use .ts format for best compat
   useEffect(() => {
     if (!heroStream || !username || !password) return;
     (async () => {
       try {
         const data = await api.getStreamUrl(username, password, heroStream.stream_id, 'live', 'ts');
-        setHeroVideoUrl(data.url);
+        // Use the direct .ts URL for best compatibility with expo-av
+        setHeroVideoUrl(data.ts_url || data.fallback_url || data.url);
       } catch (e) { console.error('Hero URL error:', e); }
     })();
   }, [heroStream, username, password]);
 
-  // Play hero channel -> stop preview, start global player, go fullscreen
+  // Play hero channel -> stop local preview, start global player fullscreen
   const playHeroFullscreen = async () => {
     if (!heroStream) return;
     try {
-      // Stop local preview
+      // Stop and unload the local preview first
       if (heroVideoRef.current) {
         await heroVideoRef.current.stopAsync().catch(() => {});
+        await heroVideoRef.current.unloadAsync().catch(() => {});
       }
       const url = heroVideoUrl || (await api.getStreamUrl(username, password, heroStream.stream_id, 'live', 'ts')).url;
       playStream(url, heroStream.stream_name || heroStream.name || '', heroStream.stream_icon || '', '', heroStream.stream_id, heroStream.category_id || '', '');
       setFullscreen(true);
-      // Load stream list for channel navigation
+      // Load stream list for channel up/down navigation
       api.getLiveStreams(username, password).then(streams => {
         if (Array.isArray(streams)) setStreamList(streams);
       }).catch(() => {});
@@ -100,13 +101,17 @@ export default function HomeScreen() {
   // Play a channel from favorites/history -> navigate to live tab
   const playChannel = async (item: any) => {
     try {
+      if (heroVideoRef.current) {
+        await heroVideoRef.current.stopAsync().catch(() => {});
+        await heroVideoRef.current.unloadAsync().catch(() => {});
+      }
       const urlData = await api.getStreamUrl(username, password, item.stream_id, item.stream_type || 'live', 'ts');
       playStream(urlData.url, item.stream_name || item.name || '', item.stream_icon || '', '', item.stream_id, item.category_id || '', urlData.fallback_url || '');
       router.push('/(tabs)/live');
     } catch (e) { console.error('Play error:', e); }
   };
 
-  // Show hero video preview only when no global stream is active
+  // Hero video plays only when no global stream is active
   const showHeroVideo = !!heroVideoUrl && !videoState.streamUrl;
   const hasActiveStream = !!videoState.streamUrl;
 
@@ -123,8 +128,8 @@ export default function HomeScreen() {
       <ScrollView showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor={colors.primary} />}
       >
-        {/* Header */}
-        <View style={styles.header}>
+        {/* Header - with safe area padding to avoid status bar overlap */}
+        <View style={[styles.header, { paddingTop: STATUS_BAR_H + 12 }]}>
           <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Elite Wave</Text>
           <TouchableOpacity testID="settings-btn" onPress={() => router.push('/settings')}>
             <Ionicons name="settings-outline" size={24} color={colors.textSecondary} />
@@ -139,16 +144,17 @@ export default function HomeScreen() {
             activeOpacity={0.85}
             onPress={playHeroFullscreen}
           >
-            {/* Video preview - plays muted when no global stream is active */}
+            {/* Live video preview - muted, auto-plays when no global stream is active */}
             {showHeroVideo ? (
               <Video
                 ref={heroVideoRef}
-                source={{ uri: heroVideoUrl }}
+                source={{ uri: heroVideoUrl! }}
                 style={styles.heroVideo}
                 resizeMode={ResizeMode.COVER}
-                shouldPlay={showHeroVideo}
-                isMuted
+                shouldPlay
+                isMuted={true}
                 isLooping={false}
+                onError={(e: any) => console.warn('Hero video error:', e)}
               />
             ) : heroStream.stream_icon ? (
               <Image source={{ uri: heroStream.stream_icon }} style={styles.heroImage} resizeMode="cover" />
@@ -308,11 +314,10 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 8 },
   headerTitle: { fontSize: 24, fontWeight: '800' },
 
-  // Hero card with video preview
-  heroCard: { marginHorizontal: 16, borderRadius: 16, overflow: 'hidden', marginBottom: 24, height: 220, position: 'relative' },
+  heroCard: { marginHorizontal: 16, borderRadius: 16, overflow: 'hidden', marginBottom: 24, height: 220, position: 'relative', backgroundColor: '#000' },
   heroVideo: { width: '100%', height: '100%' },
   heroImage: { width: '100%', height: '100%' },
   heroImagePlaceholder: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
@@ -345,7 +350,6 @@ const styles = StyleSheet.create({
   emptyRow: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 20, borderRadius: 12 },
   emptyText: { fontSize: 14 },
 
-  // Continue Watching banner
   cwBanner: {
     position: 'absolute', bottom: 0, left: 16, right: 16,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
