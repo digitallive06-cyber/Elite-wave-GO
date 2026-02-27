@@ -165,7 +165,7 @@ export default function LiveScreen() {
         }
       } catch {}
 
-      // Tell global player to play this stream
+      // Tell global player to play this stream (with fallback URL for LB)
       playStream(
         data.url,
         item.name,
@@ -173,6 +173,7 @@ export default function LiveScreen() {
         programTitle,
         item.stream_id,
         item.category_id || '',
+        data.fallback_url || data.raw_url || '',
       );
 
       // Add to watch history
