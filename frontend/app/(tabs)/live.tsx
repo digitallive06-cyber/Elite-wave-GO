@@ -320,6 +320,15 @@ export default function LiveScreen() {
   // TV Guide header
   const renderGuideHeader = () => (
     <View>
+      {/* Back to channel list */}
+      <TouchableOpacity
+        testID="guide-back-btn"
+        style={styles.guideBackRow}
+        onPress={() => setShowGuide(false)}
+      >
+        <Ionicons name="chevron-back" size={20} color={colors.primary} />
+        <Text style={[styles.guideBackText, { color: colors.primary }]}>Back to channels</Text>
+      </TouchableOpacity>
       {/* Channel selector strip */}
       <FlatList
         horizontal
