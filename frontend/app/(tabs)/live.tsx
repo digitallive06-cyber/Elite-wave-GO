@@ -414,7 +414,7 @@ export default function LiveScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: STATUS_BAR_H }]}>
       {/* CHANNEL LIST VIEW (default when entering Live tab) */}
       {!showGuide ? (
         <>
@@ -511,6 +511,7 @@ export default function LiveScreen() {
             <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
           ) : (
             <FlatList
+              style={{ flex: 1 }}
               data={filteredStreams}
               keyExtractor={(item, i) => `stream-${item.stream_id || i}`}
               renderItem={renderChannel}
