@@ -118,7 +118,7 @@ export const GlobalVideoPlayer: React.FC = () => {
 
   // --- Orientation listener ---
   useEffect(() => {
-    if (Platform.OS === 'web' || !hasStream) return;
+    if (Platform.OS === 'web' || !hasStream || !isOnLiveTab) return;
     const sub = ScreenOrientation.addOrientationChangeListener((e) => {
       const o = e.orientationInfo.orientation;
       const landscape = o === ScreenOrientation.Orientation.LANDSCAPE_LEFT || o === ScreenOrientation.Orientation.LANDSCAPE_RIGHT;
