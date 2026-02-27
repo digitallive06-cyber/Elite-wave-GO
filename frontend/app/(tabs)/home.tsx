@@ -255,7 +255,7 @@ export default function HomeScreen() {
               )}
             />
           ) : (
-            <View style={[styles.emptyRow, { backgroundColor: colors.surface }]}><Ionicons name="film-outline" size={24} color={colors.textSecondary} /><Text style={[styles.emptyText, { color: colors.textSecondary }]}>No movies available</Text></View>
+            <View style={[styles.emptyRow, { backgroundColor: colors.surface }]}><Ionicons name="film-outline" size={24} color={colors.textSecondary} /><Text style={[styles.emptyText, { color: colors.textSecondary }]}>Nothing in this section</Text></View>
           )}
         </View>
 
@@ -279,7 +279,7 @@ export default function HomeScreen() {
               )}
             />
           ) : (
-            <View style={[styles.emptyRow, { backgroundColor: colors.surface }]}><Ionicons name="albums-outline" size={24} color={colors.textSecondary} /><Text style={[styles.emptyText, { color: colors.textSecondary }]}>No series available</Text></View>
+            <View style={[styles.emptyRow, { backgroundColor: colors.surface }]}><Ionicons name="albums-outline" size={24} color={colors.textSecondary} /><Text style={[styles.emptyText, { color: colors.textSecondary }]}>Nothing in this section</Text></View>
           )}
         </View>
         <View style={{ height: 80 }} />
