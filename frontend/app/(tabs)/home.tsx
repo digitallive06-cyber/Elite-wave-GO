@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Image,
   FlatList, ActivityIndicator, Dimensions, RefreshControl,
@@ -101,8 +101,8 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Hero Card - show when no stream is playing (static preview) */}
-        {!hasActiveStream && heroStream && (
+        {/* Hero Card - always shown as static preview */}
+        {heroStream && (
           <TouchableOpacity
             testID="hero-card"
             style={styles.heroCard}
