@@ -248,12 +248,22 @@ export const GlobalVideoPlayer: React.FC = () => {
         </View>
       )}
 
-      {/* FULLSCREEN TUBI-STYLE */}
+      {/* FULLSCREEN CONTROLS */}
       {isFS && (
-        <TouchableWithoutFeedback onPress={() => { showControls ? (setShowControls(false), clearControlsTimer()) : resetControlsTimer(); }}>
-          <View style={StyleSheet.absoluteFill}>
-            {showControls && (
-              <View style={styles.fsOverlay}>
+        <View style={StyleSheet.absoluteFill}>
+          {/* Background tap detector - toggles controls visibility */}
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => {
+              if (showControls) { setShowControls(false); clearControlsTimer(); }
+              else { resetControlsTimer(); }
+            }}
+          />
+
+          {showControls && (
+            <View style={styles.fsOverlay} pointerEvents="box-none">
+              {/* Top bar - captures touches to prevent hiding */}
+              <Pressable onPress={() => resetControlsTimer()}>
                 <LinearGradient colors={['rgba(0,0,0,0.85)', 'rgba(0,0,0,0.3)', 'transparent']} style={styles.fsTopBar}>
                   <TouchableOpacity testID="fs-back-btn" style={styles.fsBackBtn} onPress={() => setFullscreen(false)}>
                     <Ionicons name="chevron-back" size={28} color="#fff" />
@@ -266,25 +276,28 @@ export const GlobalVideoPlayer: React.FC = () => {
                     <Ionicons name="scan-outline" size={22} color="#fff" />
                   </TouchableOpacity>
                 </LinearGradient>
+              </Pressable>
 
-                {/* Right side: channel logo + arrows */}
-                <View style={styles.fsRightSide} pointerEvents="box-none">
-                  <TouchableOpacity style={styles.fsRightArrow} onPress={() => handleChangeChannel('prev')}>
-                    <Ionicons name="chevron-up" size={28} color="rgba(255,255,255,0.8)" />
-                  </TouchableOpacity>
-                  {state.channelIcon ? <Image source={{ uri: state.channelIcon }} style={styles.fsRightLogo} resizeMode="contain" /> : null}
-                  <TouchableOpacity style={styles.fsRightArrow} onPress={() => handleChangeChannel('next')}>
-                    <Ionicons name="chevron-down" size={28} color="rgba(255,255,255,0.8)" />
-                  </TouchableOpacity>
-                </View>
+              {/* Right side: channel arrows + logo */}
+              <View style={styles.fsRightSide}>
+                <Pressable testID="fs-ch-up-btn" style={styles.fsRightArrow} onPress={() => { handleChangeChannel('prev'); resetControlsTimer(); }}>
+                  <Ionicons name="chevron-up" size={28} color="rgba(255,255,255,0.8)" />
+                </Pressable>
+                {state.channelIcon ? <Image source={{ uri: state.channelIcon }} style={styles.fsRightLogo} resizeMode="contain" /> : null}
+                <Pressable testID="fs-ch-down-btn" style={styles.fsRightArrow} onPress={() => { handleChangeChannel('next'); resetControlsTimer(); }}>
+                  <Ionicons name="chevron-down" size={28} color="rgba(255,255,255,0.8)" />
+                </Pressable>
+              </View>
 
-                {/* Center play/pause */}
-                <View style={styles.fsCenterRow} pointerEvents="box-none">
-                  <TouchableOpacity testID="fs-play-btn" style={styles.fsCenterBtn} onPress={() => { togglePlay(); resetControlsTimer(); }}>
-                    <Ionicons name={state.isPlaying ? 'pause' : 'play'} size={44} color="#fff" />
-                  </TouchableOpacity>
-                </View>
+              {/* Center play/pause */}
+              <View style={styles.fsCenterRow} pointerEvents="box-none">
+                <Pressable testID="fs-play-btn" style={styles.fsCenterBtn} onPress={() => { togglePlay(); resetControlsTimer(); }}>
+                  <Ionicons name={state.isPlaying ? 'pause' : 'play'} size={44} color="#fff" />
+                </Pressable>
+              </View>
 
+              {/* Bottom bar - captures touches to prevent hiding */}
+              <Pressable onPress={() => resetControlsTimer()}>
                 <LinearGradient colors={['transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.85)']} style={styles.fsBottomBar}>
                   <View style={styles.fsBottomInfo}>
                     <Text style={styles.fsChannelName} numberOfLines={1}>{state.channelName}</Text>
@@ -306,10 +319,10 @@ export const GlobalVideoPlayer: React.FC = () => {
                     </TouchableOpacity>
                   </View>
                 </LinearGradient>
-              </View>
-            )}
-          </View>
-        </TouchableWithoutFeedback>
+              </Pressable>
+            </View>
+          )}
+        </View>
       )}
     </View>
   );
