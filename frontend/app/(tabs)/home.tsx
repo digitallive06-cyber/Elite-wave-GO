@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Image,
   FlatList, ActivityIndicator, Dimensions, RefreshControl,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/contexts/ThemeContext';
@@ -18,7 +19,7 @@ export default function HomeScreen() {
   const { colors } = useTheme();
   const { username, password } = useAuth();
   const { favorites, loadServerFavorites } = useFavorites();
-  const { playStream, state: videoState, setFullscreen } = useGlobalVideo();
+  const { playStream, state: videoState, setFullscreen, setStreamList } = useGlobalVideo();
   const router = useRouter();
   const [history, setHistory] = useState<any[]>([]);
   const [heroStream, setHeroStream] = useState<any>(null);
@@ -26,6 +27,7 @@ export default function HomeScreen() {
   const [recentSeries, setRecentSeries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const autoPlayedRef = useRef(false);
 
   const loadData = useCallback(async () => {
     if (!username || !password) return;
@@ -54,6 +56,22 @@ export default function HomeScreen() {
 
   useEffect(() => { if (username && password) loadData(); }, [username, password, loadData]);
 
+  // Auto-play hero channel muted on first load
+  useEffect(() => {
+    if (!heroStream || autoPlayedRef.current || !username || !password || videoState.streamUrl) return;
+    autoPlayedRef.current = true;
+    const timer = setTimeout(async () => {
+      try {
+        const urlData = await api.getStreamUrl(username, password, heroStream.stream_id, heroStream.stream_type || 'live', 'ts');
+        playStream(urlData.url, heroStream.stream_name || heroStream.name || '', heroStream.stream_icon || '', '', heroStream.stream_id, heroStream.category_id || '', urlData.fallback_url || '');
+        // Load stream list for channel navigation in fullscreen
+        const streams = await api.getLiveStreams(username, password);
+        if (Array.isArray(streams)) setStreamList(streams);
+      } catch (e) { console.error('Auto-play error:', e); }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [heroStream, username, password, videoState.streamUrl]);
+
   // Play hero channel -> start stream and go fullscreen
   const playHeroFullscreen = async () => {
     if (!heroStream) return;
@@ -61,6 +79,10 @@ export default function HomeScreen() {
       const urlData = await api.getStreamUrl(username, password, heroStream.stream_id, heroStream.stream_type || 'live', 'ts');
       playStream(urlData.url, heroStream.stream_name || heroStream.name || '', heroStream.stream_icon || '', '', heroStream.stream_id, heroStream.category_id || '', urlData.fallback_url || '');
       setFullscreen(true);
+      // Ensure stream list is loaded for channel up/down
+      api.getLiveStreams(username, password).then(streams => {
+        if (Array.isArray(streams)) setStreamList(streams);
+      }).catch(() => {});
     } catch (e) { console.error('Hero play error:', e); }
   };
 
@@ -72,6 +94,8 @@ export default function HomeScreen() {
       router.push('/(tabs)/live');
     } catch (e) { console.error('Play error:', e); }
   };
+
+  const hasActiveStream = !!videoState.streamUrl;
 
   if (loading) {
     return (
@@ -94,29 +118,48 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Hero Card - dark card with play button */}
-        {heroStream && (
-          <TouchableOpacity testID="hero-card" style={[styles.heroCard, { backgroundColor: colors.surface }]} activeOpacity={0.85} onPress={playHeroFullscreen}>
-            <View style={styles.heroInner}>
-              {heroStream.stream_icon ? (
-                <Image source={{ uri: heroStream.stream_icon }} style={styles.heroLogo} resizeMode="contain" />
-              ) : null}
-              <View style={styles.heroTextWrap}>
-                <View style={styles.heroLiveBadge}>
-                  <View style={styles.heroLiveDot} />
-                  <Text style={styles.heroLiveText}>LIVE</Text>
+        {/* Hero Card - show when no stream is playing (static preview) */}
+        {!hasActiveStream && heroStream && (
+          <TouchableOpacity
+            testID="hero-card"
+            style={styles.heroCard}
+            activeOpacity={0.85}
+            onPress={playHeroFullscreen}
+          >
+            {heroStream.stream_icon ? (
+              <Image source={{ uri: heroStream.stream_icon }} style={styles.heroImage} resizeMode="cover" />
+            ) : (
+              <View style={[styles.heroImagePlaceholder, { backgroundColor: colors.surfaceHighlight }]}>
+                <Ionicons name="tv" size={48} color={colors.textSecondary} />
+              </View>
+            )}
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.9)']}
+              style={styles.heroGradient}
+            >
+              <View style={styles.heroOverlayContent}>
+                <View style={styles.heroLeftCol}>
+                  <View style={styles.heroLiveBadge}>
+                    <View style={styles.heroLiveDot} />
+                    <Text style={styles.heroLiveText}>LIVE</Text>
+                  </View>
+                  <Text style={styles.heroName} numberOfLines={1}>
+                    {heroStream.stream_name || heroStream.name || 'Featured'}
+                  </Text>
+                  <Text style={styles.heroCat}>
+                    {heroStream.category_name || 'USA'}
+                  </Text>
                 </View>
-                <Text style={[styles.heroName, { color: colors.textPrimary }]} numberOfLines={1}>
-                  {heroStream.stream_name || heroStream.name || 'Featured'}
-                </Text>
-                <Text style={[styles.heroCat, { color: colors.textSecondary }]}>
-                  {heroStream.category_name || 'USA'}
-                </Text>
+                <View style={styles.heroRightCol}>
+                  <View style={styles.heroPlayBtn}>
+                    <Ionicons name="play" size={28} color="#fff" />
+                  </View>
+                  {heroStream.stream_icon ? (
+                    <Image source={{ uri: heroStream.stream_icon }} style={styles.heroSmallLogo} resizeMode="contain" />
+                  ) : null}
+                </View>
               </View>
-              <View style={styles.heroPlayBtn}>
-                <Ionicons name="play" size={28} color="#fff" />
-              </View>
-            </View>
+            </LinearGradient>
           </TouchableOpacity>
         )}
 
@@ -215,17 +258,21 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
   headerTitle: { fontSize: 24, fontWeight: '800' },
 
-  // Hero card - matches old design
-  heroCard: { marginHorizontal: 16, borderRadius: 16, overflow: 'hidden', marginBottom: 24, padding: 20 },
-  heroInner: { flexDirection: 'row', alignItems: 'center' },
-  heroLogo: { width: 64, height: 64, borderRadius: 12, marginRight: 14 },
-  heroTextWrap: { flex: 1 },
+  // Hero card - large image-based design matching the correct screenshot
+  heroCard: { marginHorizontal: 16, borderRadius: 16, overflow: 'hidden', marginBottom: 24, height: 220, position: 'relative' },
+  heroImage: { width: '100%', height: '100%' },
+  heroImagePlaceholder: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
+  heroGradient: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 16, paddingBottom: 16, paddingTop: 60 },
+  heroOverlayContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
+  heroLeftCol: { flex: 1, marginRight: 16 },
   heroLiveBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#E50914', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 4, alignSelf: 'flex-start', marginBottom: 8 },
   heroLiveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#fff' },
   heroLiveText: { color: '#fff', fontSize: 10, fontWeight: '800' },
-  heroName: { fontSize: 18, fontWeight: '800' },
-  heroCat: { fontSize: 13, marginTop: 3 },
-  heroPlayBtn: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#00B4D8', justifyContent: 'center', alignItems: 'center', marginLeft: 10 },
+  heroName: { fontSize: 20, fontWeight: '800', color: '#fff' },
+  heroCat: { fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 3 },
+  heroRightCol: { alignItems: 'center', gap: 8 },
+  heroPlayBtn: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#00B4D8', justifyContent: 'center', alignItems: 'center' },
+  heroSmallLogo: { width: 32, height: 32, borderRadius: 6 },
 
   section: { marginBottom: 24, paddingHorizontal: 20 },
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
