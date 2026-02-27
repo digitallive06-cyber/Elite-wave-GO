@@ -44,6 +44,17 @@ export default function LiveScreen() {
   const [epgLoading, setEpgLoading] = useState(false);
   const [selectedDateStr, setSelectedDateStr] = useState(getDateStr(new Date()));
 
+  // Reset guide view when leaving the Live tab
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        // Tab lost focus -> reset to channel list view
+        setShowGuide(false);
+        setLiveGuideActive(false);
+      };
+    }, [setLiveGuideActive])
+  );
+
   // Date options for guide
   const dateOptions = useMemo(() => {
     const today = new Date();
