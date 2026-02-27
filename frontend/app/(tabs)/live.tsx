@@ -390,8 +390,8 @@ export default function LiveScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* CHANNEL LIST VIEW (no active channel) */}
-      {!activeStreamId ? (
+      {/* CHANNEL LIST VIEW (default when entering Live tab) */}
+      {!showGuide ? (
         <>
           <Text style={[styles.pageTitle, { color: colors.textPrimary }]}>Live TV</Text>
 
