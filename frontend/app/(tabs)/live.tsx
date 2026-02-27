@@ -1,13 +1,10 @@
-import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, Image,
   TextInput, ActivityIndicator, RefreshControl, Platform,
-  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Video, ResizeMode } from 'expo-av';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useFavorites } from '../../src/contexts/FavoritesContext';
@@ -25,13 +22,10 @@ export default function LiveScreen() {
   const { colors } = useTheme();
   const { username, password } = useAuth();
   const { favorites, isFavorite, toggleFavorite } = useFavorites();
-  const { playStream: globalPlayStream, setFullscreen, state: videoState } = useGlobalVideo();
-  const router = useRouter();
-  const { width: windowW } = useWindowDimensions();
-  const PLAYER_HEIGHT = Platform.OS === 'web' ? 240 : Math.min(windowW * 9 / 16, 240);
+  const { playStream, stopStream, state: videoState } = useGlobalVideo();
 
-  // Local video ref for inline preview only
-  const videoRef = useRef<any>(null);
+  // Active channel is tracked via global video state
+  const activeStreamId = videoState.streamId;
 
   const [categories, setCategories] = useState<any[]>([]);
   const [streams, setStreams] = useState<any[]>([]);
@@ -43,19 +37,7 @@ export default function LiveScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [epgData, setEpgData] = useState<{ [key: number]: any }>({});
 
-  // Inline player state
-  const [activeChannel, setActiveChannel] = useState<any>(null);
-  const [streamUrl, setStreamUrl] = useState<string | null>(null);
-  const [playerLoading, setPlayerLoading] = useState(false);
-  const [playerEpg, setPlayerEpg] = useState<{ current: any; next: any } | null>(null);
-  const [playerProgress, setPlayerProgress] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-
-  // Screen ratio control for inline preview
-  const [resizeModeIdx, setResizeModeIdx] = useState(0);
-  const resizeModes: ResizeMode[] = [ResizeMode.CONTAIN, ResizeMode.COVER, ResizeMode.STRETCH];
-
-  // Full TV guide state
+  // TV guide state
   const [channelFullEpg, setChannelFullEpg] = useState<any[]>([]);
   const [epgLoading, setEpgLoading] = useState(false);
   const [selectedDateStr, setSelectedDateStr] = useState(getDateStr(new Date()));
@@ -129,7 +111,7 @@ export default function LiveScreen() {
     } catch (e) { console.error('Batch EPG error:', e); }
   };
 
-  // Load full TV guide EPG for selected channel
+  // Load full TV guide EPG
   const loadFullEpg = async (streamId: number) => {
     setEpgLoading(true);
     setChannelFullEpg([]);
@@ -163,16 +145,38 @@ export default function LiveScreen() {
     loadStreams(catId || undefined);
   };
 
-  // Play channel inline (hero preview) + load full guide
-  const playChannelInline = async (item: any) => {
-    setActiveChannel(item);
-    setPlayerLoading(true);
-    setPlayerEpg(null);
-    setSelectedDateStr(getDateStr(new Date()));
+  // Play a channel via global video player
+  const playChannel = async (item: any) => {
     try {
       const data = await api.getStreamUrl(username, password, item.stream_id, 'live', 'ts');
-      setStreamUrl(data.url);
-      const cat = categories.find(c => c.category_id === item.category_id);
+
+      // Get current program title from EPG
+      let programTitle = '';
+      try {
+        const epg = await api.getEpg(username, password, item.stream_id);
+        if (epg?.epg_listings?.length > 0) {
+          const now = Math.floor(Date.now() / 1000);
+          const current = epg.epg_listings.find((e: any) => {
+            const start = parseInt(e.start_timestamp) || 0;
+            const end = parseInt(e.stop_timestamp) || 0;
+            return now >= start && now <= end;
+          });
+          if (current?.title) programTitle = current.title;
+        }
+      } catch {}
+
+      // Tell global player to play this stream
+      playStream(
+        data.url,
+        item.name,
+        item.stream_icon || '',
+        programTitle,
+        item.stream_id,
+        item.category_id || '',
+      );
+
+      // Add to watch history
+      const cat = categories.find((c: any) => c.category_id === item.category_id);
       api.addHistory({
         username,
         stream_id: item.stream_id,
@@ -181,87 +185,12 @@ export default function LiveScreen() {
         stream_type: 'live',
         category_name: cat?.category_name || '',
       }).catch(() => {});
-      // Load short EPG for inline player overlay
-      const epg = await api.getEpg(username, password, item.stream_id).catch(() => null);
-      if (epg?.epg_listings?.length > 0) {
-        const now = Math.floor(Date.now() / 1000);
-        const getTs = (e: any, field: 'start' | 'end') => {
-          if (field === 'start') return parseInt(e.start_timestamp) || Math.floor(new Date(e.start + ' UTC').getTime() / 1000);
-          return parseInt(e.stop_timestamp) || Math.floor(new Date(e.end + ' UTC').getTime() / 1000);
-        };
-        const current = epg.epg_listings.find((e: any) => now >= getTs(e, 'start') && now <= getTs(e, 'end'));
-        const next = epg.epg_listings.find((e: any) => getTs(e, 'start') > now);
-        setPlayerEpg({ current: current || null, next: next || null });
-        if (current) {
-          const start = getTs(current, 'start');
-          const end = getTs(current, 'end');
-          setPlayerProgress(Math.min(Math.max((now - start) / (end - start), 0), 1));
-        }
-      }
-    } catch (e) { console.error(e); }
-    finally { setPlayerLoading(false); }
-    // Load full TV guide in background
-    loadFullEpg(item.stream_id);
+
+      // Load full EPG for TV guide
+      setSelectedDateStr(getDateStr(new Date()));
+      loadFullEpg(item.stream_id);
+    } catch (e) { console.error('Error playing channel:', e); }
   };
-
-  // Fullscreen - use global video player
-  const goFullscreen = useCallback(() => {
-    if (!activeChannel || !streamUrl) {
-      console.log('goFullscreen: no active channel or streamUrl');
-      return;
-    }
-    // Pause local video
-    if (videoRef.current) videoRef.current.pauseAsync().catch(() => {});
-    // Play on global player and set fullscreen
-    globalPlayStream(streamUrl, activeChannel.name, activeChannel.stream_icon || '', playerEpg?.current?.title || '');
-    setFullscreen(true);
-  }, [activeChannel, streamUrl, playerEpg, globalPlayStream, setFullscreen]);
-
-  // Navigate to multiview
-  const openMultiview = useCallback(() => {
-    if (videoRef.current) videoRef.current.pauseAsync().catch(() => {});
-    setFullscreen(false);
-    router.push({
-      pathname: '/multiview',
-      params: {
-        streamId: String(activeChannel?.stream_id || ''),
-        streamName: activeChannel?.name || '',
-        streamIcon: activeChannel?.stream_icon || '',
-        categoryId: selectedCategory || activeChannel?.category_id || '',
-        directUrl: streamUrl || '',
-      },
-    });
-  }, [activeChannel, streamUrl, selectedCategory, router, setFullscreen]);
-
-  // Android back button - exit fullscreen
-  useEffect(() => {
-    if (Platform.OS !== 'android') return;
-    const backAction = () => {
-      if (isFullscreen) {
-        exitFullscreen();
-        return true;
-      }
-      return false;
-    };
-    const handler = BackHandler.addEventListener('hardwareBackPress', backAction);
-    return () => handler.remove();
-  }, [isFullscreen, exitFullscreen]);
-
-  // Pause/resume on screen focus
-  useFocusEffect(
-    useCallback(() => {
-      // Resume when returning from multiview
-      if (activeChannel && streamUrl && videoRef.current) {
-        videoRef.current.playAsync().catch(() => {});
-      }
-      return () => {
-        if (videoRef.current) videoRef.current.pauseAsync().catch(() => {});
-        if (Platform.OS !== 'web') {
-          ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
-        }
-      };
-    }, [activeChannel, streamUrl])
-  );
 
   // Filtered programs for TV guide
   const filteredPrograms = useMemo(() => {
@@ -283,7 +212,7 @@ export default function LiveScreen() {
 
   const renderChannel = ({ item, index }: { item: any; index: number }) => {
     const epg = epgData[item.stream_id];
-    const isActive = activeChannel?.stream_id === item.stream_id;
+    const isActive = activeStreamId === item.stream_id;
     return (
       <TouchableOpacity
         testID={`live-channel-${index}`}
@@ -292,7 +221,7 @@ export default function LiveScreen() {
           { backgroundColor: isActive ? colors.primary + '15' : colors.surface, borderColor: isActive ? colors.primary : colors.border },
         ]}
         activeOpacity={0.7}
-        onPress={() => playChannelInline(item)}
+        onPress={() => playChannel(item)}
       >
         <View style={[styles.channelLogo, { backgroundColor: colors.surfaceHighlight }]}>
           {item.stream_icon ? (
@@ -335,7 +264,6 @@ export default function LiveScreen() {
     );
   };
 
-  // Render a program row in the TV guide
   const renderProgram = ({ item }: { item: any }) => {
     const now = Math.floor(Date.now() / 1000);
     const startTs = parseInt(item.start_timestamp);
@@ -378,10 +306,10 @@ export default function LiveScreen() {
     );
   };
 
-  // TV Guide header (channel selector + date picker)
+  // TV Guide header
   const renderGuideHeader = () => (
     <View>
-      {/* Channel selector */}
+      {/* Channel selector strip */}
       <FlatList
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -389,7 +317,7 @@ export default function LiveScreen() {
         keyExtractor={(item, i) => `sel-${item.stream_id || i}`}
         contentContainerStyle={styles.channelSelectorList}
         renderItem={({ item }) => {
-          const isActive = activeChannel?.stream_id === item.stream_id;
+          const isActive = activeStreamId === item.stream_id;
           return (
             <TouchableOpacity
               style={[
@@ -397,7 +325,7 @@ export default function LiveScreen() {
                 { backgroundColor: colors.surface, borderColor: isActive ? colors.primary : colors.border },
                 isActive && styles.channelSelectorCardActive,
               ]}
-              onPress={() => playChannelInline(item)}
+              onPress={() => playChannel(item)}
               activeOpacity={0.7}
             >
               {item.stream_icon ? (
@@ -433,7 +361,7 @@ export default function LiveScreen() {
           </TouchableOpacity>
         )}
       />
-      {/* Guide section header */}
+      {/* Guide section title */}
       <View style={[styles.guideSectionHeader, { borderBottomColor: colors.border }]}>
         <Text style={[styles.guideSectionTitle, { color: colors.textPrimary }]}>TV Schedule</Text>
         {epgLoading && <ActivityIndicator size="small" color={colors.primary} />}
@@ -443,125 +371,20 @@ export default function LiveScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
-      </SafeAreaView>
+      </View>
     );
   }
 
-  // ==================== RENDER ====================
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <StatusBar hidden={isFullscreen} style="light" />
-
-      {/* ONE Video component - LAYOUT-BASED fullscreen */}
-      {activeChannel && streamUrl && (
-        <View style={isFullscreen ? [styles.fullscreenContainer, { width: windowW, height: windowH }] : styles.previewContainer}>
-          <Video
-            ref={videoRef}
-            testID="live-video-player"
-            source={{ uri: streamUrl }}
-            style={styles.video}
-            resizeMode={resizeModes[resizeModeIdx]}
-            shouldPlay
-            useNativeControls={false}
-            onPlaybackStatusUpdate={(status: any) => {
-              if (status.isLoaded) setIsPlaying(status.isPlaying);
-            }}
-          />
-          {/* Fullscreen controls overlay */}
-          {isFullscreen && (
-            <View style={styles.fsOverlay} pointerEvents="box-none">
-              <View style={styles.fsTopBar}>
-                <TouchableOpacity testID="fs-back-btn" style={styles.fsTopBtn} onPress={exitFullscreen}>
-                  <Ionicons name="chevron-back" size={24} color="#fff" />
-                </TouchableOpacity>
-                <Text style={styles.fsChannelName} numberOfLines={1}>{activeChannel.name}</Text>
-                <TouchableOpacity testID="fs-ratio-btn" style={styles.fsRatioBtn} onPress={cycleResizeMode}>
-                  <Text style={styles.fsRatioBtnText}>{resizeModeLabels[resizeModeIdx]}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity testID="fs-fav-btn" style={styles.fsTopBtn} onPress={() => toggleFavorite(activeChannel.stream_id, 'live')}>
-                  <Ionicons name={isFavorite(activeChannel.stream_id, 'live') ? 'star' : 'star-outline'} size={22} color="#FFD700" />
-                </TouchableOpacity>
-              </View>
-              <View style={styles.fsBottomBar}>
-                {playerEpg?.current?.title && (
-                  <Text style={styles.fsProgramName} numberOfLines={1}>{playerEpg.current.title}</Text>
-                )}
-                <View style={styles.fsControlsRow}>
-                  <TouchableOpacity style={styles.fsCtrlBtn} onPress={() => {
-                    if (videoRef.current) { isPlaying ? videoRef.current.pauseAsync() : videoRef.current.playAsync(); }
-                  }}>
-                    <Ionicons name={isPlaying ? 'pause' : 'play'} size={32} color="#fff" />
-                  </TouchableOpacity>
-                  <TouchableOpacity testID="fs-multiview-btn" style={styles.fsCtrlBtn} onPress={openMultiview}>
-                    <Ionicons name="grid-outline" size={24} color="#fff" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          )}
-          {/* Inline overlay - only when NOT fullscreen */}
-          {!isFullscreen && (
-            <>
-              <View style={styles.inlineOverlay}>
-                <View style={styles.inlineInfoRow}>
-                  {activeChannel.stream_icon ? (
-                    <Image source={{ uri: activeChannel.stream_icon }} style={styles.inlineIcon} resizeMode="contain" />
-                  ) : null}
-                  <View style={styles.inlineInfoText}>
-                    <Text style={styles.inlineChannelName} numberOfLines={1}>{activeChannel.name}</Text>
-                    {playerEpg?.current?.title ? (
-                      <Text style={styles.inlineProgramName} numberOfLines={1}>{playerEpg.current.title}</Text>
-                    ) : null}
-                  </View>
-                  <View style={styles.inlineLiveBadge}>
-                    <Text style={styles.inlineLiveText}>LIVE</Text>
-                  </View>
-                </View>
-                {playerEpg?.current && (
-                  <View style={styles.inlineProgress}>
-                    <View style={styles.inlineProgressBar}>
-                      <View style={[styles.inlineProgressFill, { width: `${playerProgress * 100}%` }]} />
-                    </View>
-                  </View>
-                )}
-              </View>
-              <View style={styles.inlineControls}>
-                <TouchableOpacity testID="inline-close-btn" style={styles.inlineControlBtn} onPress={() => {
-                  if (videoRef.current) videoRef.current.pauseAsync().catch(() => {});
-                  setActiveChannel(null); setStreamUrl(null); setChannelFullEpg([]);
-                }}>
-                  <Ionicons name="close" size={18} color="#fff" />
-                </TouchableOpacity>
-                <TouchableOpacity testID="inline-play-btn" style={styles.inlineControlBtn} onPress={() => {
-                  if (videoRef.current) { isPlaying ? videoRef.current.pauseAsync() : videoRef.current.playAsync(); }
-                }}>
-                  <Ionicons name={isPlaying ? 'pause' : 'play'} size={18} color="#fff" />
-                </TouchableOpacity>
-                <TouchableOpacity testID="inline-fullscreen-btn" style={styles.inlineControlBtn} onPress={goFullscreen}>
-                  <Ionicons name="expand" size={18} color="#fff" />
-                </TouchableOpacity>
-              </View>
-            </>
-          )}
-        </View>
-      )}
-      {/* Loading spinner for channel */}
-      {activeChannel && playerLoading && !streamUrl && (
-        <View style={styles.previewContainer}><View style={styles.inlineLoading}><ActivityIndicator size="small" color="#00BFFF" /></View></View>
-      )}
-
-      {/* Everything below is hidden when fullscreen */}
-      {!isFullscreen && (
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-
-      {/* CHANNEL LIST MODE (no active channel) */}
-      {!activeChannel && (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* CHANNEL LIST VIEW (no active channel) */}
+      {!activeStreamId ? (
         <>
           <Text style={[styles.pageTitle, { color: colors.textPrimary }]}>Live TV</Text>
 
-          {/* Favorites Section */}
+          {/* Favorites */}
           {favorites.length > 0 && (
             <View style={styles.favSection}>
               <Text style={[styles.favSectionTitle, { color: colors.textPrimary }]}>Favorites</Text>
@@ -583,7 +406,7 @@ export default function LiveScreen() {
                         stream_icon: item.stream_icon,
                         category_id: item.category_id,
                       };
-                      playChannelInline(fullStream);
+                      playChannel(fullStream);
                     }}
                   >
                     {item.stream_icon ? (
@@ -599,6 +422,7 @@ export default function LiveScreen() {
             </View>
           )}
 
+          {/* Search */}
           <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Ionicons name="search" size={18} color={colors.textSecondary} />
             <TextInput
@@ -615,6 +439,8 @@ export default function LiveScreen() {
               </TouchableOpacity>
             ) : null}
           </View>
+
+          {/* Categories */}
           <View style={styles.catSection}>
             <FlatList
               horizontal
@@ -638,14 +464,44 @@ export default function LiveScreen() {
               )}
             />
           </View>
+
+          {/* Channel count */}
           <View style={styles.guideHeader}>
             <Text style={[styles.guideTitle, { color: colors.textPrimary }]}>{filteredStreams.length} channels</Text>
           </View>
-        </>
-      )}
 
-      {/* TV GUIDE MODE (channel active) */}
-      {activeChannel ? (
+          {/* Channel list */}
+          {loadingStreams ? (
+            <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
+          ) : (
+            <FlatList
+              data={filteredStreams}
+              keyExtractor={(item, i) => `stream-${item.stream_id || i}`}
+              renderItem={renderChannel}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 16 }}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => {
+                setRefreshing(true);
+                setEpgData({});
+                loadStreams(selectedCategory || undefined);
+              }} tintColor={colors.primary} />}
+              onEndReached={() => {
+                const loaded = Object.keys(epgData).map(Number);
+                const needEpg = filteredStreams.filter(s => s.epg_channel_id && !loaded.includes(s.stream_id));
+                if (needEpg.length > 0) loadEpgBatch(needEpg.slice(0, 20));
+              }}
+              onEndReachedThreshold={0.5}
+              ListEmptyComponent={
+                <View style={[styles.emptyState, { backgroundColor: colors.surface }]}>
+                  <Ionicons name="tv-outline" size={40} color={colors.textSecondary} />
+                  <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No channels found</Text>
+                </View>
+              }
+            />
+          )}
+        </>
+      ) : (
+        /* TV GUIDE VIEW (channel active) */
         loadingStreams ? (
           <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
         ) : (
@@ -666,38 +522,6 @@ export default function LiveScreen() {
             }
           />
         )
-      ) : (
-        // CHANNEL LIST
-        loadingStreams ? (
-          <View style={styles.loadingWrap}><ActivityIndicator size="large" color={colors.primary} /></View>
-        ) : (
-          <FlatList
-            data={filteredStreams}
-            keyExtractor={(item, i) => `stream-${item.stream_id || i}`}
-            renderItem={renderChannel}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 16 }}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => {
-              setRefreshing(true);
-              setEpgData({});
-              loadStreams(selectedCategory || undefined);
-            }} tintColor={colors.primary} />}
-            onEndReached={() => {
-              const loaded = Object.keys(epgData).map(Number);
-              const needEpg = filteredStreams.filter(s => s.epg_channel_id && !loaded.includes(s.stream_id));
-              if (needEpg.length > 0) loadEpgBatch(needEpg.slice(0, 20));
-            }}
-            onEndReachedThreshold={0.5}
-            ListEmptyComponent={
-              <View style={[styles.emptyState, { backgroundColor: colors.surface }]}>
-                <Ionicons name="tv-outline" size={40} color={colors.textSecondary} />
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No channels found</Text>
-              </View>
-            }
-          />
-        )
-      )}
-    </SafeAreaView>
       )}
     </View>
   );
@@ -708,7 +532,7 @@ const styles = StyleSheet.create({
   loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   pageTitle: { fontSize: 24, fontWeight: '800', paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
 
-  // Favorites section
+  // Favorites
   favSection: { marginBottom: 8 },
   favSectionTitle: { fontSize: 16, fontWeight: '700', paddingHorizontal: 20, marginBottom: 10 },
   favList: { paddingHorizontal: 16, gap: 10 },
@@ -720,42 +544,23 @@ const styles = StyleSheet.create({
   favCardName: { fontSize: 10, fontWeight: '600', textAlign: 'center' },
   favStar: { position: 'absolute', top: 4, right: 4 },
 
-  // Inline player
-  inlinePlayerSection: { backgroundColor: '#000' },
-  inlinePlayerWrap: { width: '100%', aspectRatio: 16 / 9, maxHeight: 240, position: 'relative' },
-  inlineLoading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' },
-  inlineVideoTouch: { flex: 1 },
-  inlineVideo: { width: '100%', height: '100%' },
-  inlineOverlay: { position: 'absolute', bottom: 36, left: 12, right: 12 },
-  inlineInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  inlineIcon: { width: 32, height: 32, borderRadius: 6 },
-  inlineInfoText: { flex: 1 },
-  inlineChannelName: { color: '#fff', fontSize: 14, fontWeight: '700' },
-  inlineProgramName: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 1 },
-  inlineLiveBadge: { backgroundColor: '#E50914', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 3 },
-  inlineLiveText: { color: '#fff', fontSize: 10, fontWeight: '800' },
-  inlineProgress: { marginTop: 6 },
-  inlineProgressBar: { height: 2, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 1 },
-  inlineProgressFill: { height: '100%', backgroundColor: '#00BFFF', borderRadius: 1 },
-  inlineControls: { position: 'absolute', bottom: 6, right: 8, flexDirection: 'row', gap: 4 },
-  inlineControlBtn: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center', alignItems: 'center',
-  },
-
-  // Channel list
+  // Search
   searchBar: {
     flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, paddingHorizontal: 14,
     height: 44, borderRadius: 12, borderWidth: 1, marginBottom: 8, gap: 8,
   },
   searchInput: { flex: 1, fontSize: 15, height: '100%' },
+
+  // Categories
   catSection: { height: 44, marginBottom: 4 },
   catList: { paddingHorizontal: 16, gap: 8, alignItems: 'center' },
   catChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, height: 36, justifyContent: 'center' },
   catChipText: { fontSize: 13, fontWeight: '600' },
+
   guideHeader: { paddingHorizontal: 20, paddingVertical: 6 },
   guideTitle: { fontSize: 14, fontWeight: '700' },
+
+  // Channel list
   channelRow: {
     flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, padding: 12,
     borderRadius: 12, marginBottom: 6, borderWidth: 1,
@@ -778,7 +583,7 @@ const styles = StyleSheet.create({
   emptyState: { margin: 16, padding: 40, borderRadius: 12, alignItems: 'center', gap: 8 },
   emptyText: { fontSize: 14 },
 
-  // Channel selector (guide mode)
+  // TV Guide - channel selector
   channelSelectorList: { paddingHorizontal: 12, paddingVertical: 12, gap: 8 },
   channelSelectorCard: {
     width: 72, height: 56, borderRadius: 12, borderWidth: 2,
@@ -820,99 +625,4 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   liveBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800' },
-
-  // Video container styles - CRITICAL for fullscreen toggle
-  previewContainer: {
-    width: '100%',
-    aspectRatio: 16 / 9,
-    maxHeight: 240,
-    backgroundColor: '#000',
-    position: 'relative',
-  },
-  fullscreenContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: Dimensions.get('window').width,
-    height: Dimensions.get('window').height,
-    backgroundColor: '#000',
-    zIndex: 9999,
-  },
-  video: {
-    width: '100%',
-    height: '100%',
-  },
-
-  // Fullscreen overlay controls
-  fsOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'space-between',
-    zIndex: 10,
-  },
-  fsTopBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 50 : 16,
-    paddingHorizontal: 16,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingBottom: 12,
-  },
-  fsTopBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  fsChannelName: {
-    flex: 1,
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
-    marginLeft: 12,
-  },
-  fsBottomBar: {
-    paddingHorizontal: 16,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingTop: 12,
-  },
-  fsProgramName: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 14,
-    marginBottom: 12,
-  },
-  fsControlsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 24,
-  },
-  fsCtrlBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  fsRatioBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    marginLeft: 12,
-  },
-  fsRatioBtnText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '700',
-  },
 });
