@@ -1,17 +1,44 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, Image
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, Image, Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../src/contexts/ThemeContext';
 import { useAuth } from '../src/contexts/AuthContext';
+
+const EPG_MODE_KEY = 'epg_update_mode';
+const EPG_LAST_UPDATE_KEY = 'epg_last_update';
 
 export default function SettingsScreen() {
   const { colors, mode, toggleTheme } = useTheme();
   const { username, userInfo, logout } = useAuth();
   const router = useRouter();
+  const [epgMode, setEpgMode] = useState<'startup' | 'daily'>('daily');
+  const [epgLastUpdate, setEpgLastUpdate] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const stored = await AsyncStorage.getItem(EPG_MODE_KEY);
+      if (stored === 'startup' || stored === 'daily') setEpgMode(stored);
+      const lastUp = await AsyncStorage.getItem(EPG_LAST_UPDATE_KEY);
+      setEpgLastUpdate(lastUp);
+    })();
+  }, []);
+
+  const changeEpgMode = async (newMode: 'startup' | 'daily') => {
+    setEpgMode(newMode);
+    await AsyncStorage.setItem(EPG_MODE_KEY, newMode);
+  };
+
+  const forceEpgUpdate = async () => {
+    const now = new Date().toISOString();
+    await AsyncStorage.setItem(EPG_LAST_UPDATE_KEY, now);
+    setEpgLastUpdate(now);
+    Alert.alert('EPG Updated', 'The EPG data has been force refreshed. New guide data will load when you visit Live TV.');
+  };
 
   const handleLogout = async () => {
     await logout();
