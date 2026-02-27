@@ -189,11 +189,19 @@ export default function LiveScreen() {
         category_name: cat?.category_name || '',
       }).catch(() => {});
 
-      // Load full EPG for TV guide
+      // Load full EPG for TV guide and show guide view
       setSelectedDateStr(getDateStr(new Date()));
       loadFullEpg(item.stream_id);
+      setShowGuide(true);
     } catch (e) { console.error('Error playing channel:', e); }
   };
+
+  // Reset guide view when stream stops
+  useEffect(() => {
+    if (showGuide && !activeStreamId) {
+      setShowGuide(false);
+    }
+  }, [showGuide, activeStreamId]);
 
   // Filtered programs for TV guide
   const filteredPrograms = useMemo(() => {
