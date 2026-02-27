@@ -73,6 +73,7 @@ export default function LiveScreen() {
       const arr = Array.isArray(data) ? data : [];
       setStreams(arr);
       setFilteredStreams(arr);
+      setStreamList(arr); // Push to global context for channel up/down
       loadEpgBatch(arr.filter(s => s.epg_channel_id).slice(0, 20));
     } catch (e) { console.error(e); }
     finally { setLoadingStreams(false); setRefreshing(false); }
