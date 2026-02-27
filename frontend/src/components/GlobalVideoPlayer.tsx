@@ -163,7 +163,9 @@ export const GlobalVideoPlayer: React.FC = () => {
 
   const containerStyle = isFS
     ? [styles.fullscreenContainer, { width: screenW, height: screenH }]
-    : showPlayer ? styles.inlineContainer : styles.hiddenContainer;
+    : showPlayer
+      ? (isOnHomeTab ? styles.homeInlineContainer : styles.inlineContainer)
+      : styles.hiddenContainer;
 
   return (
     <View style={containerStyle}>
