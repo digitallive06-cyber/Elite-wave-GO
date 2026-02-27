@@ -38,6 +38,7 @@ export default function LiveScreen() {
   const [epgData, setEpgData] = useState<{ [key: number]: any }>({});
 
   // TV guide state
+  const [showGuide, setShowGuide] = useState(false);
   const [channelFullEpg, setChannelFullEpg] = useState<any[]>([]);
   const [epgLoading, setEpgLoading] = useState(false);
   const [selectedDateStr, setSelectedDateStr] = useState(getDateStr(new Date()));
