@@ -27,7 +27,6 @@ export default function HomeScreen() {
   const [recentSeries, setRecentSeries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const autoPlayedRef = useRef(false);
 
   const loadData = useCallback(async () => {
     if (!username || !password) return;
