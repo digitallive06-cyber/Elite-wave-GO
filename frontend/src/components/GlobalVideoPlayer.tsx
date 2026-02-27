@@ -177,7 +177,7 @@ export const GlobalVideoPlayer: React.FC = () => {
         style={styles.video}
         resizeMode={RESIZE_MODES[state.resizeModeIdx]}
         shouldPlay={isFS || showPlayer}
-        isMuted={state.isMuted}
+        isMuted={state.isMuted || (!isFS && !showPlayer)}
         useNativeControls={false}
         onPlaybackStatusUpdate={handlePlaybackStatus}
       />
