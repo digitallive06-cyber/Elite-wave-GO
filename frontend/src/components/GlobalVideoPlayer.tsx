@@ -38,6 +38,7 @@ export const GlobalVideoPlayer: React.FC = () => {
   // Tab detection
   const isOnLiveTab = pathname?.includes('live') || false;
   const isOnHomeTab = pathname === '/' || pathname === '/(tabs)' || pathname?.includes('home') || false;
+  const isOnMultiview = pathname?.includes('multiview') || false;
   const hasStream = !!state.streamUrl;
   const isFS = state.isFullscreen;
   // Only show inline player on Live tab when user is in guide mode (selected a channel from list)
