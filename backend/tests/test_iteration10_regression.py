@@ -6,7 +6,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = "https://multiview-iptv.preview.emergentagent.com"
+BASE_URL = "https://iptv-player-refactor.preview.emergentagent.com"
 TEST_USERNAME = "DJBIGANT"
 TEST_PASSWORD = "sTtb4D5v7T"
 
