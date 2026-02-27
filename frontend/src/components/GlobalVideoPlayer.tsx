@@ -49,15 +49,13 @@ export const GlobalVideoPlayer: React.FC = () => {
   useEffect(() => { isFullscreenRef.current = isFS; }, [isFS]);
   useEffect(() => { isTransitioningRef.current = state.isTransitioning; }, [state.isTransitioning]);
 
-  // Auto mute on Home, unmute on Live
+  // Auto unmute on Live tab or fullscreen
   useEffect(() => {
     if (!hasStream) return;
-    if (isOnHomeTab && !isFS) {
-      setMuted(true);
-    } else if (isOnLiveTab || isFS) {
+    if (isOnLiveTab || isFS) {
       setMuted(false);
     }
-  }, [isOnHomeTab, isOnLiveTab, isFS, hasStream, setMuted]);
+  }, [isOnLiveTab, isFS, hasStream, setMuted]);
 
   // --- Controls auto-hide ---
   const clearControlsTimer = useCallback(() => {
