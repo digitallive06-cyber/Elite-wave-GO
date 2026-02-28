@@ -15,7 +15,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://channel-hub-android.preview.emergentagent.com')
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://multiview-test.preview.emergentagent.com')
 
 # Test credentials from logs
 TEST_USERNAME = "DJBIGANT"
