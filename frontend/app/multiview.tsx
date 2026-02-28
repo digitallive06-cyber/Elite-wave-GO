@@ -41,6 +41,7 @@ export default function MultiviewScreen() {
       streamName: params.streamName || '',
       streamIcon: params.streamIcon || '',
       streamUrl: params.directUrl || '',
+      fallbackUrl: '',
       categoryId: params.categoryId || '',
     },
     null, null, null,
