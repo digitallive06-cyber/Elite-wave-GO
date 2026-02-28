@@ -17,6 +17,13 @@ import { api } from '../utils/api';
 const RESIZE_MODES = [ResizeMode.CONTAIN, ResizeMode.COVER, ResizeMode.STRETCH];
 const RESIZE_LABELS = ['FIT', 'FILL', 'STRETCH'];
 
+const formatTime = (t: string) => {
+  try {
+    const d = new Date(t);
+    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  } catch { return ''; }
+};
+
 export const GlobalVideoPlayer: React.FC = () => {
   const {
     videoRef, state, streamList, playStream, stopStream, setFullscreen,
