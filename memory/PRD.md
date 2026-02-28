@@ -23,19 +23,30 @@ Build an IPTV mobile application for Android (APK) using the Xtream Codes API, c
 
 ## What's Been Implemented
 
-### Feb 27, 2026 - Session 3 (Current)
+### Feb 27, 2026 - Session 4 (Current)
+**Fullscreen Player UI Tweaks (ONLY GlobalVideoPlayer.tsx changed):**
+- Channel up/down buttons: Increased touch target from 60x60 to 76x76px, added hitSlop (20px), bigger icons (32px)
+- Bottom bar gradient: Made more transparent (0.45 opacity max)
+- EPG "Now/Next" guide in fullscreen bottom bar (already coded in session 3, now with transparent overlay)
+
+### Feb 27, 2026 - Session 3
 **P0 Bug Fixes - UI Regressions:**
-- Fixed Home screen hero card: Redesigned as large image-based card with `LinearGradient` overlay, LIVE badge, channel name/category, blue play button
-- Fixed Live TV navigation: Added `showGuide` local state - always shows channel list first, TV guide only after channel selection
+- Fixed Home screen hero card: Redesigned as large image-based card with LinearGradient overlay, LIVE badge, channel name/category, blue play button
+- Fixed Live TV navigation: Added showGuide local state - always shows channel list first, TV guide only after channel selection
 - Added "Back to channels" button in TV guide header
 
 **P1 Fixes:**
 - Auto-play hero channel muted on Home screen load
-- Fixed channel up/down by populating `streamList` from Home screen
-- Home inline player has rounded corners and margins (`homeInlineContainer` style)
+- Fixed channel up/down by populating streamList from Home screen
+- Home inline player has rounded corners and margins
 
 **New Feature:**
-- "Continue Watching" mini-player banner on Home screen - floating bar showing last watched channel with resume button
+- "Continue Watching" mini-player banner on Home screen
+
+**Multiview Feature (FIXED):**
+- Rewrote MultiviewCell to use expo-av Video with imperative loadAsync
+- 4 streams play simultaneously
+- Tutorial popup, audio selection by tap, channel change by long press
 
 ### Previous Sessions
 - Global Video Player architecture (GlobalVideoContext + GlobalVideoPlayer singleton)
@@ -47,31 +58,30 @@ Build an IPTV mobile application for Android (APK) using the Xtream Codes API, c
 - Channel change overlay with fade animation
 - LB/raw IP support (usesCleartextTraffic)
 
-## APK Build History
-- Build 8ccb5220 (Feb 27 Session 3): All regression fixes + continue watching banner
-- Build 311f12ee: SDK 54, bug fixes + Tubi-style player
-- Build 19216709: SDK 54, initial global player + features
-
 ## Key Files
-- `frontend/app/(tabs)/home.tsx` - Home screen with hero card, auto-play, continue watching banner
+- `frontend/src/components/GlobalVideoPlayer.tsx` - Singleton video player with fullscreen UI
 - `frontend/app/(tabs)/live.tsx` - Live TV with channel list + TV guide views
-- `frontend/src/components/GlobalVideoPlayer.tsx` - Singleton video player
+- `frontend/app/(tabs)/home.tsx` - Home screen with hero card, auto-play, continue watching banner
+- `frontend/app/multiview.tsx` - 4-channel grid view
 - `frontend/src/contexts/GlobalVideoContext.tsx` - Player state management
 - `frontend/src/contexts/FavoritesContext.tsx` - Favorites management
 - `backend/server.py` - FastAPI backend proxy
 
 ## Prioritized Backlog
 
+### P0 (Critical - Next)
+- Fix Live TV guide scrolling bugs (channel list bounces back to top)
+- Fix EPG date pills not scrollable in guide view
+- Fix "Back to channels" button in Live TV guide
+
 ### P1 (High)
-- Multiview screen implementation (4-channel grid)
-- VOD/Series content screens
-- Load Balancer stream playback verification
+- Channel down button verification in fullscreen
+- VOD/Catch-Up category icon alignment
+- EPG settings logic implementation
 
 ### P2 (Medium)
-- Settings screen
-- Global search
-- Catch-up TV
-- EPG data display improvements ("what's on now/next")
+- Global search feature
+- VOD/Series content improvements
 
 ### P3 (Low)
 - PiP mode
