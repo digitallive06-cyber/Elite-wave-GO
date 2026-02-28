@@ -286,7 +286,7 @@ function MultiviewCell({
       <Video
         ref={videoRef}
         style={StyleSheet.absoluteFill}
-        source={{ uri: slot.streamUrl }}
+        source={{ uri: slot.streamUrl, overrideFileExtensionAndroid: 'ts' }}
         resizeMode={ResizeMode.CONTAIN}
         shouldPlay={true}
         isLooping={false}
