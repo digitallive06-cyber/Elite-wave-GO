@@ -85,12 +85,15 @@ export default function MultiviewScreen() {
     }
   }, []);
 
-  // Resolve stream URL for a slot - use direct HTTPS ts_url for reliability with concurrent streams
-  const resolveSlotUrl = useCallback(async (streamId: number): Promise<string> => {
+  // Resolve stream URL for a slot - returns both primary and fallback URLs
+  const resolveSlotUrl = useCallback(async (streamId: number): Promise<{ url: string; fallbackUrl: string }> => {
     try {
       const data = await api.getStreamUrl(username, password, streamId, 'live', 'ts');
-      return data.ts_url || data.fallback_url || data.url || '';
-    } catch { return ''; }
+      return {
+        url: data.url || data.ts_url || '',
+        fallbackUrl: data.ts_url || data.fallback_url || '',
+      };
+    } catch { return { url: '', fallbackUrl: '' }; }
   }, [username, password]);
 
   // Open category picker for a slot
