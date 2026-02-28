@@ -319,14 +319,29 @@ export const GlobalVideoPlayer: React.FC = () => {
 
               {/* Bottom bar - captures touches to prevent hiding */}
               <Pressable onPress={() => resetControlsTimer()}>
-                <LinearGradient colors={['transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.85)']} style={styles.fsBottomBar}>
+                <LinearGradient colors={['transparent', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.6)']} style={styles.fsBottomBar}>
                   <View style={styles.fsBottomInfo}>
-                    <Text style={styles.fsChannelName} numberOfLines={1}>{state.channelName}</Text>
-                    {state.programTitle ? <Text style={styles.fsProgramTitle} numberOfLines={1}>{state.programTitle}</Text> : null}
-                    <View style={styles.fsLiveBadge}>
-                      <Ionicons name="flash" size={10} color="#fff" />
-                      <Text style={styles.fsLiveText}>LIVE</Text>
+                    <View style={styles.fsNameRow}>
+                      <View style={styles.fsLiveBadge}>
+                        <Ionicons name="flash" size={10} color="#fff" />
+                        <Text style={styles.fsLiveText}>LIVE</Text>
+                      </View>
+                      <Text style={styles.fsChannelName} numberOfLines={1}>{state.channelName}</Text>
                     </View>
+                    {nowProgram && (
+                      <View style={styles.fsGuideRow}>
+                        <Text style={styles.fsGuideLabel}>Now</Text>
+                        <Text style={styles.fsGuideTitle} numberOfLines={1}>{nowProgram.title}</Text>
+                        <Text style={styles.fsGuideTime}>{formatTime(nowProgram.start)} - {formatTime(nowProgram.end)}</Text>
+                      </View>
+                    )}
+                    {nextProgram && (
+                      <View style={styles.fsGuideRow}>
+                        <Text style={[styles.fsGuideLabel, { opacity: 0.6 }]}>Next</Text>
+                        <Text style={[styles.fsGuideTitle, { opacity: 0.6 }]} numberOfLines={1}>{nextProgram.title}</Text>
+                        <Text style={[styles.fsGuideTime, { opacity: 0.6 }]}>{formatTime(nextProgram.start)}</Text>
+                      </View>
+                    )}
                   </View>
                   <View style={styles.fsBottomIcons}>
                     <TouchableOpacity testID="fs-fav-btn" style={styles.fsBottomIconBtn} onPress={() => { handleFavToggle(); resetControlsTimer(); }}>
