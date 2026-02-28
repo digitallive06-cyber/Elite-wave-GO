@@ -239,7 +239,7 @@ export default function MultiviewScreen() {
   );
 }
 
-// Individual cell component - each has its own video player
+// Individual cell component - each has its own video player using expo-av
 function MultiviewCell({
   index, slot, isActive, width, height, onTap, onLongPress, onAddPress,
 }: {
@@ -247,21 +247,30 @@ function MultiviewCell({
   width: number; height: number;
   onTap: () => void; onLongPress: () => void; onAddPress: () => void;
 }) {
-  const player = useVideoPlayer(slot?.streamUrl || '', (p) => {
-    if (slot?.streamUrl) {
-      p.volume = isActive ? 1 : 0;
-      p.play();
+  const videoRef = useRef<Video>(null);
+
+  // Load video when slot URL is available
+  useEffect(() => {
+    if (slot?.streamUrl && videoRef.current) {
+      videoRef.current.loadAsync(
+        { uri: slot.streamUrl },
+        { shouldPlay: true, volume: isActive ? 1 : 0, isMuted: !isActive }
+      ).catch(() => {});
     }
-  });
+    return () => {
+      if (videoRef.current) {
+        videoRef.current.unloadAsync().catch(() => {});
+      }
+    };
+  }, [slot?.streamUrl]);
 
   // Update volume when active state changes
   useEffect(() => {
-    try {
-      if (player && slot?.streamUrl) {
-        player.volume = isActive ? 1 : 0;
-      }
-    } catch {}
-  }, [isActive, player, slot?.streamUrl]);
+    if (videoRef.current && slot?.streamUrl) {
+      videoRef.current.setVolumeAsync(isActive ? 1 : 0).catch(() => {});
+      videoRef.current.setIsMutedAsync(!isActive).catch(() => {});
+    }
+  }, [isActive, slot?.streamUrl]);
 
   if (!slot) {
     // Empty slot - show "+" button
@@ -279,22 +288,26 @@ function MultiviewCell({
   }
 
   return (
-    <TouchableOpacity
-      testID={`multiview-cell-${index}`}
-      style={[styles.cell, { width, height }, isActive && styles.activeCell]}
-      onPress={onTap}
-      onLongPress={onLongPress}
-      activeOpacity={0.95}
-      delayLongPress={500}
-    >
-      <VideoView
+    <View style={[styles.cell, { width, height }]}>
+      <Video
+        ref={videoRef}
         style={StyleSheet.absoluteFill}
-        player={player}
-        contentFit="contain"
-        nativeControls={false}
+        resizeMode={ResizeMode.CONTAIN}
+        shouldPlay
+        isLooping={false}
+        volume={isActive ? 1 : 0}
+        isMuted={!isActive}
       />
-      {/* Channel name overlay */}
-      <View style={styles.cellOverlay}>
+      {/* Full-area touch target on top of video */}
+      <Pressable
+        testID={`multiview-cell-${index}`}
+        style={StyleSheet.absoluteFill}
+        onPress={onTap}
+        onLongPress={onLongPress}
+        delayLongPress={500}
+      />
+      {/* Channel name overlay - pointer events none so touches pass to Pressable */}
+      <View style={styles.cellOverlay} pointerEvents="none">
         {slot.streamIcon ? (
           <Image source={{ uri: slot.streamIcon }} style={styles.cellIcon} resizeMode="contain" />
         ) : null}
@@ -313,7 +326,7 @@ function MultiviewCell({
           <Ionicons name="volume-mute" size={12} color="rgba(255,255,255,0.5)" />
         </View>
       )}
-    </TouchableOpacity>
+    </View>
   );
 }
 
