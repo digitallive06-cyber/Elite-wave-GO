@@ -254,15 +254,49 @@ function MultiviewCell({
   onTap: () => void; onLongPress: () => void; onAddPress: () => void;
 }) {
   const videoRef = useRef<Video>(null);
+  const loadedUrlRef = useRef<string>('');
 
-  // Cleanup on unmount
+  // Load video imperatively when slot URL changes (mirrors GlobalVideoPlayer pattern)
   useEffect(() => {
-    return () => {
-      if (videoRef.current) {
-        videoRef.current.unloadAsync().catch(() => {});
+    if (!slot?.streamUrl) {
+      loadedUrlRef.current = '';
+      return;
+    }
+    if (loadedUrlRef.current === slot.streamUrl) return; // Already loaded this URL
+
+    const loadVideo = async () => {
+      const ref = videoRef.current;
+      if (!ref) return;
+      try {
+        await ref.unloadAsync().catch(() => {});
+      } catch {}
+      // Try primary URL first
+      try {
+        await ref.loadAsync(
+          { uri: slot.streamUrl, overrideFileExtensionAndroid: 'ts' },
+          { shouldPlay: true, volume: isActive ? 1 : 0, isMuted: !isActive }
+        );
+        loadedUrlRef.current = slot.streamUrl;
+        return;
+      } catch {}
+      // Try fallback URL
+      if (slot.fallbackUrl && slot.fallbackUrl !== slot.streamUrl) {
+        try {
+          await ref.loadAsync(
+            { uri: slot.fallbackUrl, overrideFileExtensionAndroid: 'ts' },
+            { shouldPlay: true, volume: isActive ? 1 : 0, isMuted: !isActive }
+          );
+          loadedUrlRef.current = slot.streamUrl;
+        } catch {}
       }
     };
-  }, []);
+    loadVideo();
+
+    return () => {
+      videoRef.current?.unloadAsync().catch(() => {});
+      loadedUrlRef.current = '';
+    };
+  }, [slot?.streamUrl]);
 
   // Update volume when active state changes
   useEffect(() => {
@@ -292,12 +326,7 @@ function MultiviewCell({
       <Video
         ref={videoRef}
         style={StyleSheet.absoluteFill}
-        source={{ uri: slot.streamUrl, overrideFileExtensionAndroid: 'ts' }}
         resizeMode={ResizeMode.CONTAIN}
-        shouldPlay={true}
-        isLooping={false}
-        volume={isActive ? 1 : 0}
-        isMuted={!isActive}
       />
       {/* Full-area touch target on top of video */}
       <Pressable
