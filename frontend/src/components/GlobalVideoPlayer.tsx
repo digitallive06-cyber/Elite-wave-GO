@@ -35,6 +35,10 @@ export const GlobalVideoPlayer: React.FC = () => {
   const transitionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const transitionOpacity = useRef(new Animated.Value(1)).current;
 
+  // EPG state for fullscreen TV guide
+  const [nowProgram, setNowProgram] = useState<{ title: string; start: string; end: string } | null>(null);
+  const [nextProgram, setNextProgram] = useState<{ title: string; start: string; end: string } | null>(null);
+
   // Tab detection
   const isOnLiveTab = pathname?.includes('live') || false;
   const isOnHomeTab = pathname === '/' || pathname === '/(tabs)' || pathname?.includes('home') || false;
