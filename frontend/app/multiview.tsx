@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Image, Modal, Alert,
-  FlatList, ActivityIndicator, Platform, useWindowDimensions, Pressable,
+  View, Text, StyleSheet, TouchableOpacity, Image, Modal,
+  FlatList, ActivityIndicator, Platform, useWindowDimensions,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,12 +26,14 @@ export default function MultiviewScreen() {
   const { username, password } = useAuth();
   const router = useRouter();
   const { width: ww, height: wh } = useWindowDimensions();
+  const isLandscape = ww > wh;
 
   const params = useLocalSearchParams<{
     streamId: string; streamName: string; streamIcon: string;
     categoryId: string; directUrl: string;
   }>();
 
+  // 4 slots - slot 0 is pre-filled with current channel
   const [slots, setSlots] = useState<(SlotData | null)[]>([
     {
       streamId: parseInt(params.streamId || '0'),
@@ -60,27 +62,13 @@ export default function MultiviewScreen() {
     }
     return () => {
       if (Platform.OS !== 'web') {
-        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+        ScreenOrientation.unlockAsync().catch(() => {});
         NavigationBar.setVisibilityAsync('visible').catch(() => {});
       }
     };
   }, []);
 
-  // Show tutorial on first entry
-  const tutorialShown = useRef(false);
-  useEffect(() => {
-    if (!tutorialShown.current) {
-      tutorialShown.current = true;
-      setTimeout(() => {
-        Alert.alert(
-          'Multiview Controls',
-          'Tap a channel to listen to its audio.\n\nLong press a channel (or the + button) to change the channel in that slot.',
-          [{ text: 'Got it', style: 'default' }]
-        );
-      }, 600);
-    }
-  }, []);
-
+  // Resolve stream URL for a slot when it doesn't have one
   const resolveSlotUrl = useCallback(async (streamId: number): Promise<string> => {
     try {
       const data = await api.getStreamUrl(username, password, streamId, 'live', 'ts');
@@ -88,6 +76,7 @@ export default function MultiviewScreen() {
     } catch { return ''; }
   }, [username, password]);
 
+  // Open category picker for a slot
   const openPicker = async (slotIndex: number) => {
     setPickerSlot(slotIndex);
     setPickerStep('category');
@@ -100,6 +89,7 @@ export default function MultiviewScreen() {
     finally { setPickerLoading(false); }
   };
 
+  // Select a category -> load channels
   const selectCategory = async (catId: string) => {
     setPickerStep('channel');
     setPickerLoading(true);
@@ -110,6 +100,7 @@ export default function MultiviewScreen() {
     finally { setPickerLoading(false); }
   };
 
+  // Select a channel -> fill the slot
   const selectChannel = async (channel: any) => {
     setPickerVisible(false);
     const url = await resolveSlotUrl(channel.stream_id);
@@ -128,27 +119,30 @@ export default function MultiviewScreen() {
 
   const handleBack = () => {
     if (Platform.OS !== 'web') {
-      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+      ScreenOrientation.unlockAsync().catch(() => {});
       NavigationBar.setVisibilityAsync('visible').catch(() => {});
     }
     router.back();
   };
 
-  const cellW = ww / 2;
-  const cellH = wh / 2;
+  // Calculate grid dimensions
+  const cellW = (isLandscape ? ww : ww) / 2;
+  const cellH = (isLandscape ? wh : wh) / 2;
 
   return (
     <View style={styles.container}>
       <StatusBar hidden />
 
+      {/* Back button */}
       <TouchableOpacity testID="multiview-back-btn" style={styles.backBtn} onPress={handleBack}>
         <Ionicons name="chevron-back" size={24} color="#fff" />
       </TouchableOpacity>
 
+      {/* 2x2 Grid */}
       <View style={styles.grid}>
         {[0, 1, 2, 3].map(i => (
           <MultiviewCell
-            key={`cell-${i}-${slots[i]?.streamUrl || 'empty'}`}
+            key={i}
             index={i}
             slot={slots[i]}
             isActive={activeSlot === i}
@@ -161,6 +155,7 @@ export default function MultiviewScreen() {
         ))}
       </View>
 
+      {/* Channel Picker Modal */}
       <Modal visible={pickerVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
@@ -229,6 +224,7 @@ export default function MultiviewScreen() {
   );
 }
 
+// Individual cell component - each has its own video player
 function MultiviewCell({
   index, slot, isActive, width, height, onTap, onLongPress, onAddPress,
 }: {
@@ -243,16 +239,6 @@ function MultiviewCell({
     }
   });
 
-  // Auto-play when the player is created with a valid URL
-  useEffect(() => {
-    if (player && slot?.streamUrl) {
-      try {
-        player.volume = isActive ? 1 : 0;
-        player.play();
-      } catch {}
-    }
-  }, [player, slot?.streamUrl]);
-
   // Update volume when active state changes
   useEffect(() => {
     try {
@@ -263,6 +249,7 @@ function MultiviewCell({
   }, [isActive, player, slot?.streamUrl]);
 
   if (!slot) {
+    // Empty slot - show "+" button
     return (
       <TouchableOpacity
         testID={`multiview-add-${index}`}
@@ -277,11 +264,12 @@ function MultiviewCell({
   }
 
   return (
-    <Pressable
+    <TouchableOpacity
       testID={`multiview-cell-${index}`}
       style={[styles.cell, { width, height }, isActive && styles.activeCell]}
       onPress={onTap}
       onLongPress={onLongPress}
+      activeOpacity={0.95}
       delayLongPress={500}
     >
       <VideoView
@@ -289,13 +277,9 @@ function MultiviewCell({
         player={player}
         contentFit="contain"
         nativeControls={false}
-        allowsFullscreen={false}
-        allowsPictureInPicture={false}
       />
-      {/* Transparent overlay to capture all touches above the VideoView */}
-      <View style={StyleSheet.absoluteFill} pointerEvents="box-only" />
       {/* Channel name overlay */}
-      <View style={styles.cellOverlay} pointerEvents="none">
+      <View style={styles.cellOverlay}>
         {slot.streamIcon ? (
           <Image source={{ uri: slot.streamIcon }} style={styles.cellIcon} resizeMode="contain" />
         ) : null}
@@ -314,7 +298,7 @@ function MultiviewCell({
           <Ionicons name="volume-mute" size={12} color="rgba(255,255,255,0.5)" />
         </View>
       )}
-    </Pressable>
+    </TouchableOpacity>
   );
 }
 

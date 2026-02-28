@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
   fsTopBar: { flexDirection: 'row', alignItems: 'center', paddingTop: Platform.OS === 'ios' ? 50 : 8, paddingHorizontal: 16, paddingBottom: 30, gap: 12 },
   fsBackBtn: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   fsTopIconBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.12)', justifyContent: 'center', alignItems: 'center' },
-  fsRightSide: { position: 'absolute', right: 16, top: '30%', alignItems: 'center', gap: 12, zIndex: 10 },
+  fsRightSide: { position: 'absolute', right: 16, top: '30%', alignItems: 'center', gap: 12 },
   fsRightArrow: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
   fsRightLogo: { width: 56, height: 56, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.3)' },
   fsCenterRow: { alignItems: 'center', justifyContent: 'center' },

@@ -349,7 +349,6 @@ export default function LiveScreen() {
       <FlatList
         horizontal
         showsHorizontalScrollIndicator={false}
-        nestedScrollEnabled={true}
         data={filteredStreams}
         keyExtractor={(item, i) => `sel-${item.stream_id || i}`}
         contentContainerStyle={styles.channelSelectorList}
@@ -378,7 +377,6 @@ export default function LiveScreen() {
       <FlatList
         horizontal
         showsHorizontalScrollIndicator={false}
-        nestedScrollEnabled={true}
         data={dateOptions}
         keyExtractor={item => item.value}
         contentContainerStyle={styles.dateSelectorList}
