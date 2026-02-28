@@ -308,12 +308,12 @@ export const GlobalVideoPlayer: React.FC = () => {
 
               {/* Right side: channel arrows + logo */}
               <View style={styles.fsRightSide}>
-                <Pressable testID="fs-ch-up-btn" style={styles.fsRightArrow} onPress={() => { handleChangeChannel('prev'); resetControlsTimer(); }}>
-                  <Ionicons name="chevron-up" size={28} color="rgba(255,255,255,0.8)" />
+                <Pressable testID="fs-ch-up-btn" style={styles.fsRightArrow} hitSlop={{ top: 20, bottom: 10, left: 20, right: 20 }} onPress={() => { handleChangeChannel('prev'); resetControlsTimer(); }}>
+                  <Ionicons name="chevron-up" size={32} color="rgba(255,255,255,0.9)" />
                 </Pressable>
                 {state.channelIcon ? <Image source={{ uri: state.channelIcon }} style={styles.fsRightLogo} resizeMode="contain" /> : null}
-                <Pressable testID="fs-ch-down-btn" style={styles.fsRightArrow} onPress={() => { handleChangeChannel('next'); resetControlsTimer(); }}>
-                  <Ionicons name="chevron-down" size={28} color="rgba(255,255,255,0.8)" />
+                <Pressable testID="fs-ch-down-btn" style={styles.fsRightArrow} hitSlop={{ top: 10, bottom: 20, left: 20, right: 20 }} onPress={() => { handleChangeChannel('next'); resetControlsTimer(); }}>
+                  <Ionicons name="chevron-down" size={32} color="rgba(255,255,255,0.9)" />
                 </Pressable>
               </View>
 
