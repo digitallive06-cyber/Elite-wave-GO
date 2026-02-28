@@ -163,7 +163,7 @@ export default function MultiviewScreen() {
       <View style={styles.grid}>
         {[0, 1, 2, 3].map(i => (
           <MultiviewCell
-            key={`${i}-${slots[i]?.streamUrl || 'empty'}`}
+            key={i}
             index={i}
             slot={slots[i]}
             isActive={activeSlot === i}
