@@ -62,6 +62,23 @@ export const GlobalVideoPlayer: React.FC = () => {
     }
   }, [isOnLiveTab, isFS, hasStream, setMuted]);
 
+  // Fetch EPG data for fullscreen TV guide
+  useEffect(() => {
+    if (!isFS || !state.streamId) { setNowProgram(null); setNextProgram(null); return; }
+    const fetchEpg = async () => {
+      try {
+        const data = await api.getBatchEpg(username, password, [state.streamId!]);
+        const programs = data?.[String(state.streamId)]?.epg_listings || [];
+        const now = Math.floor(Date.now() / 1000);
+        const current = programs.find((p: any) => Number(p.start_timestamp) <= now && Number(p.stop_timestamp) > now);
+        const next = programs.find((p: any) => Number(p.start_timestamp) > now);
+        setNowProgram(current ? { title: current.title, start: current.start, end: current.stop || current.end } : null);
+        setNextProgram(next ? { title: next.title, start: next.start, end: next.stop || next.end } : null);
+      } catch { setNowProgram(null); setNextProgram(null); }
+    };
+    fetchEpg();
+  }, [isFS, state.streamId, username, password]);
+
   // --- Controls auto-hide ---
   const clearControlsTimer = useCallback(() => {
     if (controlsTimer.current) { clearTimeout(controlsTimer.current); controlsTimer.current = null; }
