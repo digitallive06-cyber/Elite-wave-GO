@@ -326,7 +326,7 @@ export const GlobalVideoPlayer: React.FC = () => {
 
               {/* Bottom bar - captures touches to prevent hiding */}
               <Pressable onPress={() => resetControlsTimer()}>
-                <LinearGradient colors={['transparent', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.6)']} style={styles.fsBottomBar}>
+                <LinearGradient colors={['transparent', 'rgba(0,0,0,0.25)', 'rgba(0,0,0,0.45)']} style={styles.fsBottomBar}>
                   <View style={styles.fsBottomInfo}>
                     <View style={styles.fsNameRow}>
                       <View style={styles.fsLiveBadge}>
@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
   fsBackBtn: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   fsTopIconBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.12)', justifyContent: 'center', alignItems: 'center' },
   fsRightSide: { position: 'absolute', right: 16, top: '30%', alignItems: 'center', gap: 12, zIndex: 10 },
-  fsRightArrow: { width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
+  fsRightArrow: { width: 76, height: 76, borderRadius: 38, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
   fsRightLogo: { width: 56, height: 56, borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.3)' },
   fsCenterRow: { alignItems: 'center', justifyContent: 'center' },
   fsCenterBtn: { width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' },
