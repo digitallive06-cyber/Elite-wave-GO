@@ -249,20 +249,14 @@ function MultiviewCell({
 }) {
   const videoRef = useRef<Video>(null);
 
-  // Load video when slot URL is available
+  // Cleanup on unmount
   useEffect(() => {
-    if (slot?.streamUrl && videoRef.current) {
-      videoRef.current.loadAsync(
-        { uri: slot.streamUrl },
-        { shouldPlay: true, volume: isActive ? 1 : 0, isMuted: !isActive }
-      ).catch(() => {});
-    }
     return () => {
       if (videoRef.current) {
         videoRef.current.unloadAsync().catch(() => {});
       }
     };
-  }, [slot?.streamUrl]);
+  }, []);
 
   // Update volume when active state changes
   useEffect(() => {
@@ -292,8 +286,9 @@ function MultiviewCell({
       <Video
         ref={videoRef}
         style={StyleSheet.absoluteFill}
+        source={{ uri: slot.streamUrl }}
         resizeMode={ResizeMode.CONTAIN}
-        shouldPlay
+        shouldPlay={true}
         isLooping={false}
         volume={isActive ? 1 : 0}
         isMuted={!isActive}
