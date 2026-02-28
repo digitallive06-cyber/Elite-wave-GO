@@ -123,14 +123,15 @@ export default function MultiviewScreen() {
   // Select a channel -> fill the slot
   const selectChannel = async (channel: any) => {
     setPickerVisible(false);
-    const url = await resolveSlotUrl(channel.stream_id);
+    const urls = await resolveSlotUrl(channel.stream_id);
     setSlots(prev => {
       const next = [...prev];
       next[pickerSlot] = {
         streamId: channel.stream_id,
         streamName: channel.name || '',
         streamIcon: channel.stream_icon || '',
-        streamUrl: url,
+        streamUrl: urls.url,
+        fallbackUrl: urls.fallbackUrl,
         categoryId: channel.category_id || '',
       };
       return next;
