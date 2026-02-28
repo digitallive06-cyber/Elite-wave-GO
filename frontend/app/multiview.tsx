@@ -18,6 +18,7 @@ interface SlotData {
   streamName: string;
   streamIcon: string;
   streamUrl: string;
+  fallbackUrl: string;
   categoryId: string;
 }
 
