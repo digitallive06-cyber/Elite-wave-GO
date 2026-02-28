@@ -68,6 +68,21 @@ export default function MultiviewScreen() {
     };
   }, []);
 
+  // Show tutorial popup on first entry
+  const tutorialShown = useRef(false);
+  useEffect(() => {
+    if (!tutorialShown.current) {
+      tutorialShown.current = true;
+      setTimeout(() => {
+        Alert.alert(
+          'Multiview Controls',
+          'Tap a channel to listen to its audio.\n\nLong press a channel (or the + button) to change the channel in that slot.',
+          [{ text: 'OK', style: 'default' }]
+        );
+      }, 600);
+    }
+  }, []);
+
   // Resolve stream URL for a slot when it doesn't have one
   const resolveSlotUrl = useCallback(async (streamId: number): Promise<string> => {
     try {
