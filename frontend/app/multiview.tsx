@@ -83,11 +83,11 @@ export default function MultiviewScreen() {
     }
   }, []);
 
-  // Resolve stream URL for a slot when it doesn't have one
+  // Resolve stream URL for a slot - use direct HTTPS ts_url for reliability with concurrent streams
   const resolveSlotUrl = useCallback(async (streamId: number): Promise<string> => {
     try {
       const data = await api.getStreamUrl(username, password, streamId, 'live', 'ts');
-      return data.url || '';
+      return data.ts_url || data.fallback_url || data.url || '';
     } catch { return ''; }
   }, [username, password]);
 
