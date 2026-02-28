@@ -104,7 +104,7 @@ export default function HomeScreen() {
     } catch (e) { console.error('Hero play error:', e); }
   };
 
-  // Play a channel from favorites/history -> navigate to live tab
+  // Play a channel from favorites/history -> fullscreen
   const playChannel = async (item: any) => {
     try {
       if (heroVideoRef.current) {
@@ -113,7 +113,11 @@ export default function HomeScreen() {
       }
       const urlData = await api.getStreamUrl(username, password, item.stream_id, item.stream_type || 'live', 'ts');
       playStream(urlData.url, item.stream_name || item.name || '', item.stream_icon || '', '', item.stream_id, item.category_id || '', urlData.fallback_url || '');
-      router.push('/(tabs)/live');
+      setFullscreen(true);
+      // Load stream list for channel up/down navigation
+      api.getLiveStreams(username, password).then(streams => {
+        if (Array.isArray(streams)) setStreamList(streams);
+      }).catch(() => {});
     } catch (e) { console.error('Play error:', e); }
   };
 
