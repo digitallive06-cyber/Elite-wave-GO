@@ -490,4 +490,35 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   emptyText: { textAlign: 'center', marginTop: 40, fontSize: 14 },
+
+  // Layout picker
+  layoutPickerBack: {
+    position: 'absolute', top: 12, left: 12, zIndex: 10,
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  layoutPicker: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+  layoutTitle: { color: '#fff', fontSize: 22, fontWeight: '800', marginBottom: 6 },
+  layoutSubtitle: { color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 28 },
+  layoutOptions: { flexDirection: 'row', gap: 16 },
+  layoutCard: {
+    width: 140, backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 14, padding: 12, alignItems: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+  },
+  layoutPreview: { width: 116, height: 72, flexDirection: 'row', borderRadius: 6, overflow: 'hidden' },
+  layoutCell: {
+    backgroundColor: 'rgba(0,191,255,0.2)', borderRadius: 4,
+    borderWidth: 1, borderColor: 'rgba(0,191,255,0.5)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  layoutCellNum: { color: 'rgba(0,191,255,0.8)', fontSize: 12, fontWeight: '700' },
+  layoutLabel: { color: '#fff', fontSize: 14, fontWeight: '700', marginTop: 10 },
+  layoutChangeBtn: {
+    position: 'absolute', top: 8, right: 8, zIndex: 10,
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center', alignItems: 'center',
+  },
 });
