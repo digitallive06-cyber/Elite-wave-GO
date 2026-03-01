@@ -22,30 +22,125 @@ interface SlotData {
   categoryId: string;
 }
 
+// --- Layout Picker ---
+function LayoutPicker({ onSelect, onBack }: { onSelect: (n: 2 | 3 | 4) => void; onBack: () => void }) {
+  return (
+    <View style={lpStyles.container}>
+      <TouchableOpacity testID="layout-back-btn" style={lpStyles.backBtn} onPress={onBack}>
+        <Ionicons name="chevron-back" size={24} color="#fff" />
+      </TouchableOpacity>
+      <Text style={lpStyles.title}>Choose Layout</Text>
+      <Text style={lpStyles.subtitle}>Select how many screens you want</Text>
+      <View style={lpStyles.options}>
+        {/* 2-Screen */}
+        <TouchableOpacity testID="layout-2-btn" style={lpStyles.card} activeOpacity={0.7} onPress={() => onSelect(2)}>
+          <View style={lpStyles.preview}>
+            <View style={[lpStyles.previewCell, { flex: 1, marginRight: 2 }]}>
+              <Text style={lpStyles.cellNum}>1</Text>
+            </View>
+            <View style={[lpStyles.previewCell, { flex: 1, marginLeft: 2 }]}>
+              <Text style={lpStyles.cellNum}>2</Text>
+            </View>
+          </View>
+          <Text style={lpStyles.cardLabel}>2 Screens</Text>
+        </TouchableOpacity>
+        {/* 3-Screen */}
+        <TouchableOpacity testID="layout-3-btn" style={lpStyles.card} activeOpacity={0.7} onPress={() => onSelect(3)}>
+          <View style={lpStyles.preview}>
+            <View style={[lpStyles.previewCell, { flex: 1, marginRight: 2 }]}>
+              <Text style={lpStyles.cellNum}>1</Text>
+            </View>
+            <View style={{ flex: 1, marginLeft: 2 }}>
+              <View style={[lpStyles.previewCell, { flex: 1, marginBottom: 2 }]}>
+                <Text style={lpStyles.cellNum}>2</Text>
+              </View>
+              <View style={[lpStyles.previewCell, { flex: 1, marginTop: 2 }]}>
+                <Text style={lpStyles.cellNum}>3</Text>
+              </View>
+            </View>
+          </View>
+          <Text style={lpStyles.cardLabel}>3 Screens</Text>
+        </TouchableOpacity>
+        {/* 4-Screen */}
+        <TouchableOpacity testID="layout-4-btn" style={lpStyles.card} activeOpacity={0.7} onPress={() => onSelect(4)}>
+          <View style={lpStyles.preview}>
+            <View style={{ flex: 1, marginRight: 2 }}>
+              <View style={[lpStyles.previewCell, { flex: 1, marginBottom: 2 }]}>
+                <Text style={lpStyles.cellNum}>1</Text>
+              </View>
+              <View style={[lpStyles.previewCell, { flex: 1, marginTop: 2 }]}>
+                <Text style={lpStyles.cellNum}>3</Text>
+              </View>
+            </View>
+            <View style={{ flex: 1, marginLeft: 2 }}>
+              <View style={[lpStyles.previewCell, { flex: 1, marginBottom: 2 }]}>
+                <Text style={lpStyles.cellNum}>2</Text>
+              </View>
+              <View style={[lpStyles.previewCell, { flex: 1, marginTop: 2 }]}>
+                <Text style={lpStyles.cellNum}>4</Text>
+              </View>
+            </View>
+          </View>
+          <Text style={lpStyles.cardLabel}>4 Screens</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const lpStyles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  backBtn: {
+    position: 'absolute', top: 12, left: 12, zIndex: 10,
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  title: { color: '#fff', fontSize: 22, fontWeight: '800', marginBottom: 6 },
+  subtitle: { color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 28 },
+  options: { flexDirection: 'row', gap: 16 },
+  card: {
+    width: 140, backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 14, padding: 12, alignItems: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+  },
+  preview: {
+    width: 116, height: 72, flexDirection: 'row', borderRadius: 6, overflow: 'hidden',
+  },
+  previewCell: {
+    backgroundColor: 'rgba(0,191,255,0.2)', borderRadius: 4,
+    borderWidth: 1, borderColor: 'rgba(0,191,255,0.5)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  cellNum: { color: 'rgba(0,191,255,0.8)', fontSize: 12, fontWeight: '700' },
+  cardLabel: { color: '#fff', fontSize: 14, fontWeight: '700', marginTop: 10 },
+});
+
+
+// --- Main Screen ---
 export default function MultiviewScreen() {
   const { colors } = useTheme();
   const { username, password } = useAuth();
   const router = useRouter();
   const { width: ww, height: wh } = useWindowDimensions();
-  const isLandscape = ww > wh;
 
   const params = useLocalSearchParams<{
     streamId: string; streamName: string; streamIcon: string;
     categoryId: string; directUrl: string;
   }>();
 
-  // 4 slots - slot 0 is pre-filled with current channel
-  const [slots, setSlots] = useState<(SlotData | null)[]>([
-    {
-      streamId: parseInt(params.streamId || '0'),
-      streamName: params.streamName || '',
-      streamIcon: params.streamIcon || '',
-      streamUrl: params.directUrl || '',
-      fallbackUrl: '',
-      categoryId: params.categoryId || '',
-    },
-    null, null, null,
-  ]);
+  const initialSlot: SlotData = {
+    streamId: parseInt(params.streamId || '0'),
+    streamName: params.streamName || '',
+    streamIcon: params.streamIcon || '',
+    streamUrl: params.directUrl || '',
+    fallbackUrl: '',
+    categoryId: params.categoryId || '',
+  };
+
+  // Layout: null = show picker, 2/3/4 = show grid
+  const [layoutMode, setLayoutMode] = useState<2 | 3 | 4 | null>(null);
+  const [slots, setSlots] = useState<(SlotData | null)[]>([initialSlot, null, null, null]);
   const [activeSlot, setActiveSlot] = useState(0);
 
   // Channel picker modal state
@@ -70,10 +165,10 @@ export default function MultiviewScreen() {
     };
   }, []);
 
-  // Show tutorial popup on first entry
+  // Show tutorial popup after layout is chosen
   const tutorialShown = useRef(false);
   useEffect(() => {
-    if (!tutorialShown.current) {
+    if (layoutMode && !tutorialShown.current) {
       tutorialShown.current = true;
       setTimeout(() => {
         Alert.alert(
@@ -83,9 +178,9 @@ export default function MultiviewScreen() {
         );
       }, 600);
     }
-  }, []);
+  }, [layoutMode]);
 
-  // Resolve stream URL for a slot - returns both primary and fallback URLs
+  // Resolve stream URL for a slot
   const resolveSlotUrl = useCallback(async (streamId: number): Promise<{ url: string; fallbackUrl: string }> => {
     try {
       const data = await api.getStreamUrl(username, password, streamId, 'live', 'ts');
@@ -146,9 +241,84 @@ export default function MultiviewScreen() {
     router.back();
   };
 
-  // Calculate grid dimensions
-  const cellW = (isLandscape ? ww : ww) / 2;
-  const cellH = (isLandscape ? wh : wh) / 2;
+  // --- Grid rendering per layout ---
+  const renderGrid = () => {
+    if (!layoutMode) return null;
+    const slotCount = layoutMode;
+
+    if (layoutMode === 2) {
+      // Two side-by-side: each half width, full height
+      return (
+        <View style={styles.grid}>
+          {[0, 1].map(i => (
+            <MultiviewCell
+              key={i} index={i} slot={slots[i]} isActive={activeSlot === i}
+              width={ww / 2} height={wh}
+              onTap={() => setActiveSlot(i)}
+              onLongPress={() => openPicker(i)}
+              onAddPress={() => openPicker(i)}
+            />
+          ))}
+        </View>
+      );
+    }
+
+    if (layoutMode === 3) {
+      // Left: one large (half width, full height). Right: two stacked (half width, half height each)
+      return (
+        <View style={styles.grid}>
+          <MultiviewCell
+            key={0} index={0} slot={slots[0]} isActive={activeSlot === 0}
+            width={ww / 2} height={wh}
+            onTap={() => setActiveSlot(0)}
+            onLongPress={() => openPicker(0)}
+            onAddPress={() => openPicker(0)}
+          />
+          <View style={{ width: ww / 2, height: wh }}>
+            <MultiviewCell
+              key={1} index={1} slot={slots[1]} isActive={activeSlot === 1}
+              width={ww / 2} height={wh / 2}
+              onTap={() => setActiveSlot(1)}
+              onLongPress={() => openPicker(1)}
+              onAddPress={() => openPicker(1)}
+            />
+            <MultiviewCell
+              key={2} index={2} slot={slots[2]} isActive={activeSlot === 2}
+              width={ww / 2} height={wh / 2}
+              onTap={() => setActiveSlot(2)}
+              onLongPress={() => openPicker(2)}
+              onAddPress={() => openPicker(2)}
+            />
+          </View>
+        </View>
+      );
+    }
+
+    // layoutMode === 4: 2x2 grid (original)
+    return (
+      <View style={styles.grid}>
+        {[0, 1, 2, 3].map(i => (
+          <MultiviewCell
+            key={i} index={i} slot={slots[i]} isActive={activeSlot === i}
+            width={ww / 2} height={wh / 2}
+            onTap={() => setActiveSlot(i)}
+            onLongPress={() => openPicker(i)}
+            onAddPress={() => openPicker(i)}
+          />
+        ))}
+      </View>
+    );
+  };
+
+  // --- Layout picker or grid ---
+  if (!layoutMode) {
+    return (
+      <View style={styles.container}>
+        <StatusBar hidden />
+        <LayoutPicker onSelect={setLayoutMode} onBack={handleBack} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -159,22 +329,12 @@ export default function MultiviewScreen() {
         <Ionicons name="chevron-back" size={24} color="#fff" />
       </TouchableOpacity>
 
-      {/* 2x2 Grid */}
-      <View style={styles.grid}>
-        {[0, 1, 2, 3].map(i => (
-          <MultiviewCell
-            key={i}
-            index={i}
-            slot={slots[i]}
-            isActive={activeSlot === i}
-            width={cellW}
-            height={cellH}
-            onTap={() => setActiveSlot(i)}
-            onLongPress={() => openPicker(i)}
-            onAddPress={() => openPicker(i)}
-          />
-        ))}
-      </View>
+      {/* Layout change button */}
+      <TouchableOpacity testID="multiview-layout-btn" style={styles.layoutBtn} onPress={() => setLayoutMode(null)}>
+        <Ionicons name="grid-outline" size={18} color="#fff" />
+      </TouchableOpacity>
+
+      {renderGrid()}
 
       {/* Channel Picker Modal */}
       <Modal visible={pickerVisible} transparent animationType="fade">
@@ -245,7 +405,7 @@ export default function MultiviewScreen() {
   );
 }
 
-// Individual cell component - each has its own video player using expo-av
+// --- Individual cell component - each has its own video player using expo-av ---
 function MultiviewCell({
   index, slot, isActive, width, height, onTap, onLongPress, onAddPress,
 }: {
@@ -262,7 +422,7 @@ function MultiviewCell({
       loadedUrlRef.current = '';
       return;
     }
-    if (loadedUrlRef.current === slot.streamUrl) return; // Already loaded this URL
+    if (loadedUrlRef.current === slot.streamUrl) return;
 
     const loadVideo = async () => {
       const ref = videoRef.current;
@@ -307,7 +467,6 @@ function MultiviewCell({
   }, [isActive, slot?.streamUrl]);
 
   if (!slot) {
-    // Empty slot - show "+" button
     return (
       <TouchableOpacity
         testID={`multiview-add-${index}`}
@@ -328,7 +487,6 @@ function MultiviewCell({
         style={StyleSheet.absoluteFill}
         resizeMode={ResizeMode.CONTAIN}
       />
-      {/* Full-area touch target on top of video */}
       <Pressable
         testID={`multiview-cell-${index}`}
         style={StyleSheet.absoluteFill}
@@ -336,14 +494,12 @@ function MultiviewCell({
         onLongPress={onLongPress}
         delayLongPress={500}
       />
-      {/* Channel name overlay - pointer events none so touches pass to Pressable */}
       <View style={styles.cellOverlay} pointerEvents="none">
         {slot.streamIcon ? (
           <Image source={{ uri: slot.streamIcon }} style={styles.cellIcon} resizeMode="contain" />
         ) : null}
         <Text style={styles.cellName} numberOfLines={1}>{slot.streamName}</Text>
       </View>
-      {/* Active indicator */}
       {isActive && (
         <View style={styles.activeBorder} pointerEvents="none">
           <View style={styles.audioIcon}>
@@ -368,6 +524,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center', alignItems: 'center',
   },
+  layoutBtn: {
+    position: 'absolute', top: 8, right: 8, zIndex: 10,
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center', alignItems: 'center',
+  },
   grid: { flex: 1, flexDirection: 'row', flexWrap: 'wrap' },
 
   cell: { overflow: 'hidden', position: 'relative' },
@@ -376,7 +538,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#111', borderWidth: 1, borderColor: '#222',
   },
   addText: { color: 'rgba(255,255,255,0.3)', fontSize: 12, marginTop: 6 },
-  activeCell: {},
 
   cellOverlay: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
