@@ -71,10 +71,10 @@ export default function MultiviewScreen() {
     };
   }, []);
 
-  // Show tutorial popup on first entry
+  // Show tutorial popup after layout is chosen
   const tutorialShown = useRef(false);
   useEffect(() => {
-    if (!tutorialShown.current) {
+    if (layoutMode && !tutorialShown.current) {
       tutorialShown.current = true;
       setTimeout(() => {
         Alert.alert(
@@ -84,7 +84,7 @@ export default function MultiviewScreen() {
         );
       }, 600);
     }
-  }, []);
+  }, [layoutMode]);
 
   // Resolve stream URL for a slot - returns both primary and fallback URLs
   const resolveSlotUrl = useCallback(async (streamId: number): Promise<{ url: string; fallbackUrl: string }> => {
