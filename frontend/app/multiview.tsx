@@ -147,9 +147,64 @@ export default function MultiviewScreen() {
     router.back();
   };
 
-  // Calculate grid dimensions
-  const cellW = (isLandscape ? ww : ww) / 2;
-  const cellH = (isLandscape ? wh : wh) / 2;
+  // Calculate grid dimensions based on layout
+  const cellW = ww / 2;
+  const cellH = wh / 2;
+
+  // Layout picker screen
+  if (!layoutMode) {
+    return (
+      <View style={styles.container}>
+        <StatusBar hidden />
+        <TouchableOpacity testID="layout-back-btn" style={styles.layoutPickerBack} onPress={handleBack}>
+          <Ionicons name="chevron-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <View style={styles.layoutPicker}>
+          <Text style={styles.layoutTitle}>Choose Layout</Text>
+          <Text style={styles.layoutSubtitle}>Select how many screens you want</Text>
+          <View style={styles.layoutOptions}>
+            <TouchableOpacity testID="layout-2-btn" style={styles.layoutCard} activeOpacity={0.7} onPress={() => setLayoutMode(2)}>
+              <View style={styles.layoutPreview}>
+                <View style={[styles.layoutCell, { flex: 1, marginRight: 2 }]}><Text style={styles.layoutCellNum}>1</Text></View>
+                <View style={[styles.layoutCell, { flex: 1, marginLeft: 2 }]}><Text style={styles.layoutCellNum}>2</Text></View>
+              </View>
+              <Text style={styles.layoutLabel}>2 Screens</Text>
+            </TouchableOpacity>
+            <TouchableOpacity testID="layout-3-btn" style={styles.layoutCard} activeOpacity={0.7} onPress={() => setLayoutMode(3)}>
+              <View style={styles.layoutPreview}>
+                <View style={[styles.layoutCell, { flex: 1, marginRight: 2 }]}><Text style={styles.layoutCellNum}>1</Text></View>
+                <View style={{ flex: 1, marginLeft: 2 }}>
+                  <View style={[styles.layoutCell, { flex: 1, marginBottom: 2 }]}><Text style={styles.layoutCellNum}>2</Text></View>
+                  <View style={[styles.layoutCell, { flex: 1, marginTop: 2 }]}><Text style={styles.layoutCellNum}>3</Text></View>
+                </View>
+              </View>
+              <Text style={styles.layoutLabel}>3 Screens</Text>
+            </TouchableOpacity>
+            <TouchableOpacity testID="layout-4-btn" style={styles.layoutCard} activeOpacity={0.7} onPress={() => setLayoutMode(4)}>
+              <View style={styles.layoutPreview}>
+                <View style={{ flex: 1, marginRight: 2 }}>
+                  <View style={[styles.layoutCell, { flex: 1, marginBottom: 2 }]}><Text style={styles.layoutCellNum}>1</Text></View>
+                  <View style={[styles.layoutCell, { flex: 1, marginTop: 2 }]}><Text style={styles.layoutCellNum}>3</Text></View>
+                </View>
+                <View style={{ flex: 1, marginLeft: 2 }}>
+                  <View style={[styles.layoutCell, { flex: 1, marginBottom: 2 }]}><Text style={styles.layoutCellNum}>2</Text></View>
+                  <View style={[styles.layoutCell, { flex: 1, marginTop: 2 }]}><Text style={styles.layoutCellNum}>4</Text></View>
+                </View>
+              </View>
+              <Text style={styles.layoutLabel}>4 Screens</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  // Slot indices and sizes based on layout
+  const slotConfig = layoutMode === 2
+    ? [{ i: 0, w: ww / 2, h: wh }, { i: 1, w: ww / 2, h: wh }]
+    : layoutMode === 3
+    ? [{ i: 0, w: ww / 2, h: wh }, { i: 1, w: ww / 2, h: wh / 2 }, { i: 2, w: ww / 2, h: wh / 2 }]
+    : [{ i: 0, w: cellW, h: cellH }, { i: 1, w: cellW, h: cellH }, { i: 2, w: cellW, h: cellH }, { i: 3, w: cellW, h: cellH }];
 
   return (
     <View style={styles.container}>
@@ -160,16 +215,21 @@ export default function MultiviewScreen() {
         <Ionicons name="chevron-back" size={24} color="#fff" />
       </TouchableOpacity>
 
-      {/* 2x2 Grid */}
+      {/* Layout change button */}
+      <TouchableOpacity testID="multiview-layout-btn" style={styles.layoutChangeBtn} onPress={() => setLayoutMode(null)}>
+        <Ionicons name="grid-outline" size={18} color="#fff" />
+      </TouchableOpacity>
+
+      {/* Grid - uses original flexWrap layout */}
       <View style={styles.grid}>
-        {[0, 1, 2, 3].map(i => (
+        {slotConfig.map(({ i, w, h }) => (
           <MultiviewCell
             key={i}
             index={i}
             slot={slots[i]}
             isActive={activeSlot === i}
-            width={cellW}
-            height={cellH}
+            width={w}
+            height={h}
             onTap={() => setActiveSlot(i)}
             onLongPress={() => openPicker(i)}
             onAddPress={() => openPicker(i)}
