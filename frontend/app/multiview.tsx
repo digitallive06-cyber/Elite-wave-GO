@@ -47,6 +47,7 @@ export default function MultiviewScreen() {
     null, null, null,
   ]);
   const [activeSlot, setActiveSlot] = useState(0);
+  const [layoutMode, setLayoutMode] = useState<2 | 3 | 4 | null>(null);
 
   // Channel picker modal state
   const [pickerVisible, setPickerVisible] = useState(false);
