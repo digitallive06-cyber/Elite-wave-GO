@@ -200,11 +200,47 @@ export default function MultiviewScreen() {
   }
 
   // Slot indices and sizes based on layout
-  const slotConfig = layoutMode === 2
-    ? [{ i: 0, w: ww / 2, h: wh }, { i: 1, w: ww / 2, h: wh }]
-    : layoutMode === 3
-    ? [{ i: 0, w: ww / 2, h: wh }, { i: 1, w: ww / 2, h: wh / 2 }, { i: 2, w: ww / 2, h: wh / 2 }]
-    : [{ i: 0, w: cellW, h: cellH }, { i: 1, w: cellW, h: cellH }, { i: 2, w: cellW, h: cellH }, { i: 3, w: cellW, h: cellH }];
+  const renderGrid = () => {
+    if (layoutMode === 2) {
+      return (
+        <View style={styles.grid}>
+          <MultiviewCell key={0} index={0} slot={slots[0]} isActive={activeSlot === 0}
+            width={ww / 2} height={wh} onTap={() => setActiveSlot(0)}
+            onLongPress={() => openPicker(0)} onAddPress={() => openPicker(0)} />
+          <MultiviewCell key={1} index={1} slot={slots[1]} isActive={activeSlot === 1}
+            width={ww / 2} height={wh} onTap={() => setActiveSlot(1)}
+            onLongPress={() => openPicker(1)} onAddPress={() => openPicker(1)} />
+        </View>
+      );
+    }
+    if (layoutMode === 3) {
+      return (
+        <View style={styles.grid}>
+          <MultiviewCell key={0} index={0} slot={slots[0]} isActive={activeSlot === 0}
+            width={ww / 2} height={wh} onTap={() => setActiveSlot(0)}
+            onLongPress={() => openPicker(0)} onAddPress={() => openPicker(0)} />
+          <View style={{ width: ww / 2, height: wh }}>
+            <MultiviewCell key={1} index={1} slot={slots[1]} isActive={activeSlot === 1}
+              width={ww / 2} height={wh / 2} onTap={() => setActiveSlot(1)}
+              onLongPress={() => openPicker(1)} onAddPress={() => openPicker(1)} />
+            <MultiviewCell key={2} index={2} slot={slots[2]} isActive={activeSlot === 2}
+              width={ww / 2} height={wh / 2} onTap={() => setActiveSlot(2)}
+              onLongPress={() => openPicker(2)} onAddPress={() => openPicker(2)} />
+          </View>
+        </View>
+      );
+    }
+    // 4-screen: 2x2
+    return (
+      <View style={styles.grid}>
+        {[0, 1, 2, 3].map(i => (
+          <MultiviewCell key={i} index={i} slot={slots[i]} isActive={activeSlot === i}
+            width={cellW} height={cellH} onTap={() => setActiveSlot(i)}
+            onLongPress={() => openPicker(i)} onAddPress={() => openPicker(i)} />
+        ))}
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -220,22 +256,7 @@ export default function MultiviewScreen() {
         <Ionicons name="grid-outline" size={18} color="#fff" />
       </TouchableOpacity>
 
-      {/* Grid - uses original flexWrap layout */}
-      <View style={styles.grid}>
-        {slotConfig.map(({ i, w, h }) => (
-          <MultiviewCell
-            key={i}
-            index={i}
-            slot={slots[i]}
-            isActive={activeSlot === i}
-            width={w}
-            height={h}
-            onTap={() => setActiveSlot(i)}
-            onLongPress={() => openPicker(i)}
-            onAddPress={() => openPicker(i)}
-          />
-        ))}
-      </View>
+      {renderGrid()}
 
       {/* Channel Picker Modal */}
       <Modal visible={pickerVisible} transparent animationType="fade">
