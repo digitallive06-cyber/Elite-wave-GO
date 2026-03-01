@@ -11,7 +11,7 @@ Build an IPTV mobile application for Android (APK) using the Xtream Codes API, c
 - **Live TV**: Inline hero preview, seamless fullscreen on landscape rotation, portrait rotation exits fullscreen
 - **Player**: Tubi-style UI with gradient overlays, large center controls, channel up/down arrows, LIVE badge
 - **Screen Ratio**: FIT/FILL/STRETCH toggle
-- **Multiview**: 4-channel grid view (accessible from fullscreen controls)
+- **Multiview**: 2/3/4-channel grid view with layout picker (accessible from fullscreen controls)
 - **Channel Transition**: Show channel icon with 50% transparent background on change
 - **Home**: Locked to portrait, player hidden when navigating away from Live tab
 
@@ -23,30 +23,34 @@ Build an IPTV mobile application for Android (APK) using the Xtream Codes API, c
 
 ## What's Been Implemented
 
-### Feb 27, 2026 - Session 4 (Current)
+### Feb 28, 2026 - Session 5 (Current)
+**Multiview Layout Picker (ONLY multiview.tsx changed):**
+- Added layout picker screen with visual previews of 2, 3, and 4 screen layouts
+- 2-screen: side-by-side (half width each, full height)
+- 3-screen: one large left + two stacked right
+- 4-screen: 2x2 grid (original behavior)
+- Grid icon button (top-right) to switch layouts anytime
+- Tutorial popup delayed until after layout selection
+
+### Feb 28, 2026 - Session 4
 **Fullscreen Player UI Tweaks (ONLY GlobalVideoPlayer.tsx changed):**
 - Channel up/down buttons: Increased touch target from 60x60 to 76x76px, added hitSlop (20px), bigger icons (32px)
 - Bottom bar gradient: Made more transparent (0.45 opacity max)
-- EPG "Now/Next" guide in fullscreen bottom bar (already coded in session 3, now with transparent overlay)
+- EPG "Now/Next" guide in fullscreen bottom bar
 
 ### Feb 27, 2026 - Session 3
 **P0 Bug Fixes - UI Regressions:**
-- Fixed Home screen hero card: Redesigned as large image-based card with LinearGradient overlay, LIVE badge, channel name/category, blue play button
-- Fixed Live TV navigation: Added showGuide local state - always shows channel list first, TV guide only after channel selection
+- Fixed Home screen hero card with LinearGradient overlay, LIVE badge
+- Fixed Live TV navigation: channel list first, TV guide after selection
 - Added "Back to channels" button in TV guide header
 
 **P1 Fixes:**
 - Auto-play hero channel muted on Home screen load
 - Fixed channel up/down by populating streamList from Home screen
-- Home inline player has rounded corners and margins
 
-**New Feature:**
+**New Features:**
 - "Continue Watching" mini-player banner on Home screen
-
-**Multiview Feature (FIXED):**
-- Rewrote MultiviewCell to use expo-av Video with imperative loadAsync
-- 4 streams play simultaneously
-- Tutorial popup, audio selection by tap, channel change by long press
+- Multiview feature fully working (4 streams simultaneous)
 
 ### Previous Sessions
 - Global Video Player architecture (GlobalVideoContext + GlobalVideoPlayer singleton)
@@ -56,15 +60,13 @@ Build an IPTV mobile application for Android (APK) using the Xtream Codes API, c
 - Watch history tracking, favorites sync
 - Portrait rotation exits fullscreen, landscape enters fullscreen
 - Channel change overlay with fade animation
-- LB/raw IP support (usesCleartextTraffic)
 
 ## Key Files
+- `frontend/app/multiview.tsx` - Multiview with layout picker (2/3/4 screens)
 - `frontend/src/components/GlobalVideoPlayer.tsx` - Singleton video player with fullscreen UI
 - `frontend/app/(tabs)/live.tsx` - Live TV with channel list + TV guide views
-- `frontend/app/(tabs)/home.tsx` - Home screen with hero card, auto-play, continue watching banner
-- `frontend/app/multiview.tsx` - 4-channel grid view
+- `frontend/app/(tabs)/home.tsx` - Home screen with hero card, auto-play
 - `frontend/src/contexts/GlobalVideoContext.tsx` - Player state management
-- `frontend/src/contexts/FavoritesContext.tsx` - Favorites management
 - `backend/server.py` - FastAPI backend proxy
 
 ## Prioritized Backlog
@@ -75,7 +77,6 @@ Build an IPTV mobile application for Android (APK) using the Xtream Codes API, c
 - Fix "Back to channels" button in Live TV guide
 
 ### P1 (High)
-- Channel down button verification in fullscreen
 - VOD/Catch-Up category icon alignment
 - EPG settings logic implementation
 
