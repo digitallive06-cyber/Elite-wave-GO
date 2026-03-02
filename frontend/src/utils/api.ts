@@ -1,8 +1,22 @@
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
+// Retry wrapper for fetch - retries up to 3 times on network failures
+async function fetchWithRetry(url: string, options?: RequestInit, retries = 3): Promise<Response> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const res = await fetch(url, options);
+      return res;
+    } catch (e) {
+      if (i === retries - 1) throw e;
+      await new Promise(r => setTimeout(r, 800 * (i + 1)));
+    }
+  }
+  throw new Error('Network request failed');
+}
+
 export const api = {
   login: async (username: string, password: string) => {
-    const res = await fetch(`${BACKEND_URL}/api/auth/login`, {
+    const res = await fetchWithRetry(`${BACKEND_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
