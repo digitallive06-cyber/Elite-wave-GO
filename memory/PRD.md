@@ -6,83 +6,70 @@ Build an IPTV mobile application for Android (APK) using the Xtream Codes API, c
 ## Core Requirements
 - **API**: Xtream Codes API via backend proxy
 - **Content**: Live Channels, VOD, TV Series, Catch-up, EPG with channel logos
-- **Login**: Username/password with Elite Wave logo, NO splash screen
+- **Login**: Username/password with Elite Wave logo
 - **Favorites**: Mark channels, dedicated sections
-- **Live TV**: Inline hero preview, seamless fullscreen on landscape rotation, portrait rotation exits fullscreen
-- **Player**: Tubi-style UI with gradient overlays, large center controls, channel up/down arrows, LIVE badge
+- **Live TV**: Inline hero preview, seamless fullscreen, portrait exits fullscreen
+- **Player**: Tubi-style UI with gradient overlays, channel up/down arrows, LIVE badge
 - **Screen Ratio**: FIT/FILL/STRETCH toggle
-- **Multiview**: 2/3/4-channel grid view with layout picker (accessible from fullscreen controls)
-- **Channel Transition**: Show channel icon with 50% transparent background on change
-- **Home**: Locked to portrait, player hidden when navigating away from Live tab
+- **Multiview**: 2/3/4-channel grid view with layout picker
+- **Home**: Locked to portrait, player hidden when navigating away
+- **Update System**: Backend-driven version check + user notification
 
 ## Architecture
-- **Frontend**: Expo SDK 54 (React Native) with file-based routing
+- **Frontend**: Expo SDK 54 (React Native), file-based routing, v1.1.0
 - **Backend**: FastAPI proxy for Xtream Codes API + MongoDB
-- **Video**: Global singleton pattern - single persistent `<Video>` component at app root
-- **Build**: EAS Build, Android APK
+- **Video**: Global singleton pattern - single persistent Video component at app root
+- **Build**: EAS Build, Android APK (preview + production profiles)
 
 ## What's Been Implemented
 
-### Feb 28, 2026 - Session 5 (Current)
-**Multiview Layout Picker (ONLY multiview.tsx changed):**
-- Added layout picker screen with visual previews of 2, 3, and 4 screen layouts
-- 2-screen: side-by-side (half width each, full height)
-- 3-screen: one large left + two stacked right
-- 4-screen: 2x2 grid (original behavior)
-- Grid icon button (top-right) to switch layouts anytime
-- Tutorial popup delayed until after layout selection
-
-### Feb 28, 2026 - Session 4
-**Fullscreen Player UI Tweaks (ONLY GlobalVideoPlayer.tsx changed):**
-- Channel up/down buttons: Increased touch target from 60x60 to 76x76px, added hitSlop (20px), bigger icons (32px)
-- Bottom bar gradient: Made more transparent (0.45 opacity max)
-- EPG "Now/Next" guide in fullscreen bottom bar
-
-### Feb 27, 2026 - Session 3
-**P0 Bug Fixes - UI Regressions:**
-- Fixed Home screen hero card with LinearGradient overlay, LIVE badge
-- Fixed Live TV navigation: channel list first, TV guide after selection
-- Added "Back to channels" button in TV guide header
-
-**P1 Fixes:**
-- Auto-play hero channel muted on Home screen load
-- Fixed channel up/down by populating streamList from Home screen
-
-**New Features:**
-- "Continue Watching" mini-player banner on Home screen
-- Multiview feature fully working (4 streams simultaneous)
+### Mar 2, 2026 - Session 5 (Current)
+- **Multiview layout picker**: 2, 3, or 4 screen layout selection with visual previews
+- **3-screen layout fix**: Explicit nesting (large left + 2 stacked right)
+- **Live TV scroll bounce fix**: nestedScrollEnabled on horizontal FlatLists in guide
+- **Network retry logic**: All API calls retry 3x with backoff on failures
+- **DNS hidden**: Removed from health endpoint, only in backend/.env
+- **Update notification system**: 
+  - Backend: GET/POST /api/app/version endpoints
+  - Frontend: useUpdateChecker hook checks on startup, shows alert with Play Store + APK download options
+- **App version bumped to 1.1.0**
 
 ### Previous Sessions
-- Global Video Player architecture (GlobalVideoContext + GlobalVideoPlayer singleton)
-- Complete Tubi-style player redesign with fullscreen controls
-- Backend proxy for Xtream Codes API
-- Login, Live TV categories/EPG/search/favorites
-- Watch history tracking, favorites sync
-- Portrait rotation exits fullscreen, landscape enters fullscreen
+- Global Video Player architecture (singleton pattern)
+- Tubi-style fullscreen player with controls
+- Multiview feature (4 simultaneous streams using imperative loadAsync)
+- Home screen hero card, auto-play, continue watching
+- Live TV categories/EPG/search/favorites/guide
+- Backend proxy for all Xtream Codes API endpoints
+- Login, watch history, favorites sync
+- Orientation handling (portrait/landscape)
 - Channel change overlay with fade animation
 
 ## Key Files
 - `frontend/app/multiview.tsx` - Multiview with layout picker (2/3/4 screens)
-- `frontend/src/components/GlobalVideoPlayer.tsx` - Singleton video player with fullscreen UI
-- `frontend/app/(tabs)/live.tsx` - Live TV with channel list + TV guide views
-- `frontend/app/(tabs)/home.tsx` - Home screen with hero card, auto-play
-- `frontend/src/contexts/GlobalVideoContext.tsx` - Player state management
-- `backend/server.py` - FastAPI backend proxy
+- `frontend/src/components/GlobalVideoPlayer.tsx` - Singleton video player
+- `frontend/app/(tabs)/live.tsx` - Live TV with guide view
+- `frontend/app/(tabs)/home.tsx` - Home screen + update checker
+- `frontend/src/utils/api.ts` - API layer with retry logic
+- `frontend/src/utils/useUpdateChecker.ts` - Update notification hook
+- `backend/server.py` - FastAPI backend + version endpoints
+
+## How to Push Updates to Users
+```bash
+curl -X POST "BACKEND_URL/api/app/version?version=1.2.0&update_url=https://yourserver.com/app.apk&play_store_url=https://play.google.com/store/apps/details?id=com.elitewave.iptv&force_update=false&message=New features available!"
+```
 
 ## Prioritized Backlog
 
-### P0 (Critical - Next)
-- Fix Live TV guide scrolling bugs (channel list bounces back to top)
-- Fix EPG date pills not scrollable in guide view
-- Fix "Back to channels" button in Live TV guide
-
 ### P1 (High)
+- Fullscreen player UI: bigger channel buttons, transparent EPG overlay
 - VOD/Catch-Up category icon alignment
 - EPG settings logic implementation
 
 ### P2 (Medium)
+- EAS OTA silent updates for JS-only changes
 - Global search feature
-- VOD/Series content improvements
+- Play Store signing + submission
 
 ### P3 (Low)
 - PiP mode
