@@ -393,7 +393,51 @@ async def get_favorites(username: str):
 # Health check
 @api_router.get("/health")
 async def health():
-    return {"status": "ok", "xtream_dns": XTREAM_DNS}
+    return {"status": "ok"}
+
+# App version check for update notifications
+@api_router.get("/app/version")
+async def get_app_version():
+    config = await db.app_config.find_one({"key": "app_version"}, {"_id": 0})
+    if not config:
+        return {
+            "version": "1.0.0",
+            "update_url": "",
+            "play_store_url": "",
+            "force_update": False,
+            "message": ""
+        }
+    return {
+        "version": config.get("version", "1.0.0"),
+        "update_url": config.get("update_url", ""),
+        "play_store_url": config.get("play_store_url", ""),
+        "force_update": config.get("force_update", False),
+        "message": config.get("message", "")
+    }
+
+# Admin endpoint to set app version (call via curl to push updates)
+@api_router.post("/app/version")
+async def set_app_version(
+    version: str,
+    update_url: str = "",
+    play_store_url: str = "",
+    force_update: bool = False,
+    message: str = "A new version is available!"
+):
+    await db.app_config.update_one(
+        {"key": "app_version"},
+        {"$set": {
+            "key": "app_version",
+            "version": version,
+            "update_url": update_url,
+            "play_store_url": play_store_url,
+            "force_update": force_update,
+            "message": message,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+    return {"status": "ok", "version": version}
 
 app.include_router(api_router)
 
