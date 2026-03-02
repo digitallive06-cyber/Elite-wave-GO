@@ -14,6 +14,7 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { useFavorites } from '../../src/contexts/FavoritesContext';
 import { useGlobalVideo } from '../../src/contexts/GlobalVideoContext';
 import { api } from '../../src/utils/api';
+import { useUpdateChecker } from '../../src/utils/useUpdateChecker';
 
 const { width } = Dimensions.get('window');
 const MOVIE_CARD_WIDTH = (width - 48 - 24) / 2.5;
