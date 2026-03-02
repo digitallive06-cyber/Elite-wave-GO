@@ -35,6 +35,9 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Check for app updates on startup
+  useUpdateChecker();
+
   // Lock Home screen to portrait and stop any active stream when Home gains focus
   useFocusEffect(
     useCallback(() => {
