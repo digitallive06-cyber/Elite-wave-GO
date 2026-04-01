@@ -161,4 +161,17 @@ export const api = {
     if (!res.ok) throw new Error('Failed to load favorites');
     return res.json();
   },
+
+  // Sports (ESPN)
+  getSportsScoreboard: async (league: string) => {
+    const res = await fetchWithRetry(`${BACKEND_URL}/api/sports/scoreboard/${league}`);
+    if (!res.ok) return { events: [] };
+    return res.json();
+  },
+
+  getSportsSummary: async (league: string, eventId: string) => {
+    const res = await fetchWithRetry(`${BACKEND_URL}/api/sports/summary/${league}/${eventId}`);
+    if (!res.ok) return {};
+    return res.json();
+  },
 };

@@ -15,6 +15,7 @@ import { useFavorites } from '../../src/contexts/FavoritesContext';
 import { useGlobalVideo } from '../../src/contexts/GlobalVideoContext';
 import { api } from '../../src/utils/api';
 import { useUpdateChecker } from '../../src/utils/useUpdateChecker';
+import SportsSection from '../../src/components/SportsSection';
 
 const { width } = Dimensions.get('window');
 const MOVIE_CARD_WIDTH = (width - 48 - 24) / 2.5;
@@ -206,6 +207,9 @@ export default function HomeScreen() {
             </LinearGradient>
           </TouchableOpacity>
         )}
+
+        {/* Sports Section */}
+        <SportsSection />
 
         {/* Favorites */}
         {favorites.length > 0 && (
