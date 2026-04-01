@@ -132,12 +132,15 @@ export default function SportsSection() {
 
   const leagueObj = LEAGUES.find(l => l.key === activeLeague) || LEAGUES[1];
 
-  const loadGames = useCallback(async (league: string) => {
+  const loadGames = useCallback(async (league: string, attempt = 0) => {
     setLoading(true);
     try {
       const data = await api.getSportsScoreboard(league);
       setGames(data.events || []);
-    } catch { setGames([]); }
+    } catch {
+      if (attempt < 2) { setTimeout(() => loadGames(league, attempt + 1), 1500); return; }
+      setGames([]);
+    }
     finally { setLoading(false); }
   }, []);
 
