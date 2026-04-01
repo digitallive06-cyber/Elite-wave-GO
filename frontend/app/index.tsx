@@ -21,6 +21,7 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const retryCountRef = useRef(0);
 
   useEffect(() => {
     if (!isLoading && isLoggedIn) {
@@ -37,8 +38,6 @@ export default function LoginScreen() {
   }
 
   if (isLoggedIn) return null;
-
-  const retryCountRef = useRef(0);
 
   const handleLogin = async () => {
     if (!username.trim() || !password.trim()) {
