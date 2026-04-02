@@ -15,6 +15,9 @@
     },
     "preview": {
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_BACKEND_URL": "https://multiview-test.preview.emergentagent.com"
+      },
       "android": {
         "buildType": "apk",
         "withoutCredentials": true
