@@ -148,15 +148,4 @@ export const api = {
     return res.json();
   },
 
-  getSportsScoreboard: async (league: string) => {
-    const res = await fetch(`${BACKEND_URL}/api/sports/scoreboard/${league}`);
-    if (!res.ok) return { events: [] };
-    return res.json();
-  },
-
-  getSportsSummary: async (league: string, eventId: string) => {
-    const res = await fetch(`${BACKEND_URL}/api/sports/summary/${league}/${eventId}`);
-    if (!res.ok) return {};
-    return res.json();
-  },
 };

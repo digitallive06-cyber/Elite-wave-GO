@@ -439,37 +439,6 @@ async def set_app_version(
     )
     return {"status": "ok", "version": version}
 
-# ESPN Sports API proxy
-ESPN_LEAGUES = {
-    "nfl": ("football", "nfl"),
-    "nba": ("basketball", "nba"),
-    "mlb": ("baseball", "mlb"),
-    "nhl": ("hockey", "nhl"),
-    "mls": ("soccer", "usa.1"),
-}
-
-@api_router.get("/sports/scoreboard/{league}")
-async def sports_scoreboard(league: str, dates: Optional[str] = None):
-    if league not in ESPN_LEAGUES:
-        raise HTTPException(status_code=400, detail=f"Unknown league: {league}")
-    sport, league_code = ESPN_LEAGUES[league]
-    url = f"https://site.api.espn.com/apis/site/v2/sports/{sport}/{league_code}/scoreboard"
-    params = {}
-    if dates:
-        params["dates"] = dates
-    async with httpx.AsyncClient(timeout=15) as client:
-        resp = await client.get(url, params=params)
-        return resp.json()
-
-@api_router.get("/sports/summary/{league}/{event_id}")
-async def sports_summary(league: str, event_id: str):
-    if league not in ESPN_LEAGUES:
-        raise HTTPException(status_code=400, detail=f"Unknown league: {league}")
-    sport, league_code = ESPN_LEAGUES[league]
-    url = f"https://site.api.espn.com/apis/site/v2/sports/{sport}/{league_code}/summary"
-    async with httpx.AsyncClient(timeout=15) as client:
-        resp = await client.get(url, params={"event": event_id})
-        return resp.json()
 
 app.include_router(api_router)
 
