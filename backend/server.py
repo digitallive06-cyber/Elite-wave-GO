@@ -439,7 +439,6 @@ async def set_app_version(
     )
     return {"status": "ok", "version": version}
 
-
 app.include_router(api_router)
 
 app.add_middleware(

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, Image,
   KeyboardAvoidingView, Platform, ActivityIndicator, Keyboard,
@@ -38,6 +38,8 @@ export default function LoginScreen() {
 
   if (isLoggedIn) return null;
 
+  const retryCountRef = useRef(0);
+
   const handleLogin = async () => {
     if (!username.trim() || !password.trim()) {
       setError('Please enter both username and password');
@@ -45,14 +47,26 @@ export default function LoginScreen() {
     }
     setLoading(true);
     setError('');
+    retryCountRef.current = 0;
+    await attemptLogin();
+  };
+
+  const attemptLogin = async () => {
     try {
       const data = await api.login(username.trim(), password.trim());
       await login(username.trim(), password.trim(), data);
+      setLoading(false);
       router.replace('/(tabs)/home');
     } catch (e: any) {
-      setError(e.message || 'Login failed. Check your credentials.');
-    } finally {
-      setLoading(false);
+      retryCountRef.current++;
+      // Auto-retry up to 3 times on network failures
+      if (retryCountRef.current < 4 && !e.message?.includes('credentials')) {
+        setError(`Connecting to server... (attempt ${retryCountRef.current + 1})`);
+        setTimeout(attemptLogin, 1500);
+      } else {
+        setError(e.message || 'Login failed. Check your credentials.');
+        setLoading(false);
+      }
     }
   };
 

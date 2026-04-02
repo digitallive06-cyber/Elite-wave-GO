@@ -14,6 +14,7 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { useFavorites } from '../../src/contexts/FavoritesContext';
 import { useGlobalVideo } from '../../src/contexts/GlobalVideoContext';
 import { api } from '../../src/utils/api';
+import { useUpdateChecker } from '../../src/utils/useUpdateChecker';
 
 const { width } = Dimensions.get('window');
 const MOVIE_CARD_WIDTH = (width - 48 - 24) / 2.5;
@@ -33,6 +34,9 @@ export default function HomeScreen() {
   const [recentSeries, setRecentSeries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Check for app updates on startup
+  useUpdateChecker();
 
   // Lock Home screen to portrait and stop any active stream when Home gains focus
   useFocusEffect(
