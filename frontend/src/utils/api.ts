@@ -1,4 +1,4 @@
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://multiview-test.preview.emergentagent.com';
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://elite-wave-go-production.up.railway.app';
 
 // Retry wrapper for fetch - retries up to 3 times on network failures
 async function fetchWithRetry(url: string, options?: RequestInit, retries = 3): Promise<Response> {

@@ -16,7 +16,7 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_BACKEND_URL": "https://multiview-test.preview.emergentagent.com"
+        "EXPO_PUBLIC_BACKEND_URL": "https://elite-wave-go-production.up.railway.app"
       },
       "android": {
         "buildType": "apk",
