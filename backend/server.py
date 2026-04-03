@@ -180,7 +180,7 @@ import asyncio
 @api_router.get("/epg/batch")
 async def get_batch_epg(username: str, password: str, stream_ids: str):
     """Get EPG for multiple streams in one call. stream_ids is comma-separated."""
-    ids = [int(x.strip()) for x in stream_ids.split(",") if x.strip().isdigit()][:20]
+    ids = [int(x.strip()) for x in stream_ids.split(",") if x.strip().isdigit()][:50]
     results = {}
     for sid in ids:
         try:

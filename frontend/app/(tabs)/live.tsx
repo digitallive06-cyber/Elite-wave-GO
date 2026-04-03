@@ -89,7 +89,9 @@ export default function LiveScreen() {
       setStreams(arr);
       setFilteredStreams(arr);
       setStreamList(arr); // Push to global context for channel up/down
-      loadEpgBatch(arr.filter(s => s.epg_channel_id).slice(0, 20));
+      // Load EPG for ALL channels with guide data, in batches of 30
+      const withEpg = arr.filter(s => s.epg_channel_id);
+      loadEpgBatches(withEpg);
     } catch (e) { console.error(e); }
     finally { setLoadingStreams(false); setRefreshing(false); }
   }, [username, password]);
@@ -125,6 +127,15 @@ export default function LiveScreen() {
       }
       setEpgData(prev => ({ ...prev, ...epgMap }));
     } catch (e) { console.error('Batch EPG error:', e); }
+  };
+
+  // Load EPG for ALL channels in sequential batches of 30
+  const loadEpgBatches = async (allStreams: any[]) => {
+    const BATCH_SIZE = 30;
+    for (let i = 0; i < allStreams.length; i += BATCH_SIZE) {
+      const batch = allStreams.slice(i, i + BATCH_SIZE);
+      await loadEpgBatch(batch);
+    }
   };
 
   // Load full TV guide EPG
