@@ -15,6 +15,7 @@ import { useFavorites } from '../../src/contexts/FavoritesContext';
 import { useGlobalVideo } from '../../src/contexts/GlobalVideoContext';
 import { api } from '../../src/utils/api';
 import { useUpdateChecker } from '../../src/utils/useUpdateChecker';
+import { preloadAllEpg } from '../../src/utils/epgCache';
 
 const { width } = Dimensions.get('window');
 const MOVIE_CARD_WIDTH = (width - 48 - 24) / 2.5;
@@ -75,7 +76,13 @@ export default function HomeScreen() {
     finally { setLoading(false); setRefreshing(false); }
   }, [username, password]);
 
-  useEffect(() => { if (username && password) loadData(); }, [username, password, loadData]);
+  useEffect(() => { 
+    if (username && password) {
+      loadData();
+      // Start preloading EPG for all channels in background
+      preloadAllEpg(username, password);
+    }
+  }, [username, password, loadData]);
 
   // Fetch hero stream URL for auto-play preview - use .ts format for best compat
   useEffect(() => {

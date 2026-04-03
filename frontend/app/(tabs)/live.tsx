@@ -11,6 +11,7 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { useFavorites } from '../../src/contexts/FavoritesContext';
 import { useGlobalVideo } from '../../src/contexts/GlobalVideoContext';
 import { api } from '../../src/utils/api';
+import { getEpgCache, isEpgPreloaded, mergeEpgData } from '../../src/utils/epgCache';
 
 const STATUS_BAR_H = Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0;
 
@@ -89,9 +90,17 @@ export default function LiveScreen() {
       setStreams(arr);
       setFilteredStreams(arr);
       setStreamList(arr); // Push to global context for channel up/down
-      // Load EPG for ALL channels with guide data, in batches of 30
+      // Use preloaded EPG cache if available, otherwise load fresh
+      const cached = getEpgCache();
+      if (Object.keys(cached).length > 0) {
+        setEpgData(prev => ({ ...prev, ...cached }));
+      }
+      // Also load any missing EPG in batches (for channels not yet cached)
       const withEpg = arr.filter(s => s.epg_channel_id);
-      loadEpgBatches(withEpg);
+      const uncached = withEpg.filter(s => !cached[s.stream_id]);
+      if (uncached.length > 0) {
+        loadEpgBatches(uncached);
+      }
     } catch (e) { console.error(e); }
     finally { setLoadingStreams(false); setRefreshing(false); }
   }, [username, password]);
@@ -168,7 +177,7 @@ export default function LiveScreen() {
   const selectCategory = (catId: string | null) => {
     setSelectedCategory(catId);
     setSearch('');
-    setEpgData({});
+    // Don't clear epgData - it's preloaded globally
     loadStreams(catId || undefined);
   };
 
